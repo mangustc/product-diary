@@ -1,0 +1,16 @@
+{{ block "index" . }}
+<!doctype html>
+<head>
+    <title>Product Diary</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta charset="utf-8" />
+    <script
+        src="https://unpkg.com/htmx.org@1.9.12"
+        integrity="sha384-ujb1lZYygJmzgSwoxRggbCHcjc0rB2XoQrxeTUQyRjrOnlCoYta87iKBWq3EsdM2"
+        crossorigin="anonymous"
+    ></script>
+</head>
+<body>
+    <div hx-get="/main" hx-trigger="load"></div>
+</body>
+{{ end }}
