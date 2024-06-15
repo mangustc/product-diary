@@ -17,7 +17,6 @@ func NewStore(dbName string, tableName string, createQuery string) (*Store, erro
 	if err != nil {
 		return nil, fmt.Errorf("Failed to connect to the database (%s)", err.Error())
 	}
-	fmt.Println(tableName + ": Successfully connected to the Database")
 
 	if err := newTable(db, createQuery); err != nil {
 		return nil, fmt.Errorf("Failed to create table (%s)", err.Error())

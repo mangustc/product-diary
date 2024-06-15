@@ -1,0 +1,26 @@
+package views
+
+import "strconv"
+
+templ Index(title string) {
+<!DOCTYPE html>
+
+<head>
+    <title>{ title }</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta charset="utf-8" />
+    <script src="https://unpkg.com/htmx.org@1.9.12"
+        integrity="sha384-ujb1lZYygJmzgSwoxRggbCHcjc0rB2XoQrxeTUQyRjrOnlCoYta87iKBWq3EsdM2"
+        crossorigin="anonymous"></script>
+</head>
+
+<body>
+    { children... }
+</body>
+}
+
+templ ErrorIndex(code int, msg string) {
+@Index(strconv.Itoa(code) + " - " + msg) {
+<span>{ strconv.Itoa(code) + " - " + msg }</span>
+}
+}

@@ -3,10 +3,12 @@ package services
 import (
 	"database/sql"
 	"fmt"
+	"net/http"
 	"net/mail"
 	"time"
 
 	"github.com/bmg-c/product-diary/db"
+	"github.com/bmg-c/product-diary/errorhandler"
 )
 
 type UserPublic struct {
@@ -60,11 +62,17 @@ func (us *UserService) RegisterUser(ur UserRegister) error {
 		return err
 	}
 	if isCodeSent {
-		return fmt.Errorf("Code already has been sent")
+		return errorhandler.StatusError{
+			Err:  fmt.Errorf("Code has already been sent"),
+			Code: http.StatusUnprocessableEntity,
+		}
 	}
 
 	err = us.sendCode(ur.Email)
-	return err
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (us *UserService) ConfirmRegister(ucr UserConfirmRegister) error {
@@ -79,7 +87,10 @@ func (us *UserService) ConfirmRegister(ucr UserConfirmRegister) error {
 
 	stmt, err := us.UserStore.DB.Prepare(query)
 	if err != nil {
-		return err
+		return errorhandler.StatusError{
+			Err:  err,
+			Code: http.StatusInternalServerError,
+		}
 	}
 
 	us.UserPublic.Email = ucr.Email
@@ -89,15 +100,30 @@ func (us *UserService) ConfirmRegister(ucr UserConfirmRegister) error {
 		&code,
 	)
 	if err != nil {
-		return err
+		if err == sql.ErrNoRows {
+			return errorhandler.StatusError{
+				Err:  err,
+				Code: http.StatusNotFound,
+			}
+		}
+		return errorhandler.StatusError{
+			Err:  err,
+			Code: http.StatusInternalServerError,
+		}
 	}
 	if code != ucr.Code {
-		return fmt.Errorf("Confirmation codes do not match")
+		return errorhandler.StatusError{
+			Err:  fmt.Errorf("Confirmation codes do not match"),
+			Code: http.StatusUnprocessableEntity,
+		}
 	}
 
 	stmt.Close()
 
 	ul, err := us.addUserToDB(ucr.Email)
+	if err != nil {
+		return err
+	}
 	err = us.sendUserLogin(ul)
 	return err
 }
@@ -108,7 +134,10 @@ func (us *UserService) GetUserByID(id int) (UserPublic, error) {
 
 	stmt, err := us.UserStore.DB.Prepare(query)
 	if err != nil {
-		return UserPublic{}, err
+		return UserPublic{}, errorhandler.StatusError{
+			Err:  err,
+			Code: http.StatusInternalServerError,
+		}
 	}
 	defer stmt.Close()
 
@@ -122,7 +151,16 @@ func (us *UserService) GetUserByID(id int) (UserPublic, error) {
 		&us.UserPublic.CreatedAt,
 	)
 	if err != nil {
-		return UserPublic{}, err
+		if err == sql.ErrNoRows {
+			return UserPublic{}, errorhandler.StatusError{
+				Err:  err,
+				Code: http.StatusNotFound,
+			}
+		}
+		return UserPublic{}, errorhandler.StatusError{
+			Err:  err,
+			Code: http.StatusInternalServerError,
+		}
 	}
 
 	return us.UserPublic, nil
@@ -133,18 +171,27 @@ func (us *UserService) GetUsersAll() ([]UserPublic, error) {
 
 	rows, err := us.UserStore.DB.Query(query)
 	if err != nil {
-		return []UserPublic{}, err
+		return []UserPublic{}, errorhandler.StatusError{
+			Err:  err,
+			Code: http.StatusInternalServerError,
+		}
 	}
 	defer rows.Close()
 
 	users := []UserPublic{}
 	for rows.Next() {
-		rows.Scan(
+		err = rows.Scan(
 			&us.UserPublic.ID,
 			&us.UserPublic.Username,
 			&us.UserPublic.Email,
 			&us.UserPublic.CreatedAt,
 		)
+		if err != nil {
+			return []UserPublic{}, errorhandler.StatusError{
+				Err:  err,
+				Code: http.StatusInternalServerError,
+			}
+		}
 
 		users = append(users, us.UserPublic)
 	}
@@ -160,19 +207,28 @@ func (us *UserService) addUserToDB(email string) (UserLogin, error) {
 	password := "awooga"
 
 	query := `INSERT INTO ` + us.UserStore.TableName + `(user_id, username, email, password, created_at)
-        VALUES (?, ?, ?, ?, datetime('now'))`
+        VALUES (NULL, ?, ?, ?, datetime('now'))`
 
 	stmt, err := us.CodeStore.DB.Prepare(query)
 	defer stmt.Close()
 	if err != nil {
-		return UserLogin{}, err
+		return UserLogin{}, errorhandler.StatusError{
+			Err:  err,
+			Code: http.StatusInternalServerError,
+		}
 	}
-	_, err = stmt.Exec(nil, "master", email, password)
+	_, err = stmt.Exec("master", email, password)
+	if err != nil {
+		return UserLogin{}, errorhandler.StatusError{
+			Err:  err,
+			Code: http.StatusInternalServerError,
+		}
+	}
 
 	return UserLogin{
 		Email:    email,
 		Password: password,
-	}, err
+	}, nil
 }
 
 func (us *UserService) isCodeSent(email string) (bool, error) {
@@ -184,7 +240,10 @@ func (us *UserService) isCodeSent(email string) (bool, error) {
 		if err == sql.ErrNoRows {
 			return false, nil
 		}
-		return true, err
+		return true, errorhandler.StatusError{
+			Err:  err,
+			Code: http.StatusInternalServerError,
+		}
 	}
 	return true, nil
 }
@@ -196,23 +255,41 @@ func (us *UserService) deleteExpiredCodes() error {
 	stmt, err := us.CodeStore.DB.Prepare(query)
 	defer stmt.Close()
 	if err != nil {
-		return err
+		return errorhandler.StatusError{
+			Err:  err,
+			Code: http.StatusInternalServerError,
+		}
 	}
 	_, err = stmt.Exec()
+	if err != nil {
+		return errorhandler.StatusError{
+			Err:  err,
+			Code: http.StatusInternalServerError,
+		}
+	}
 
-	return err
+	return nil
 }
 
 func (us *UserService) sendCode(email string) error {
 	query := `INSERT INTO ` + us.CodeStore.TableName + `(code_id, email, code, created_at)
-        VALUES (?, ?, ?, datetime('now'))`
+        VALUES (NULL, ?, ?, datetime('now'))`
 
 	stmt, err := us.CodeStore.DB.Prepare(query)
 	defer stmt.Close()
 	if err != nil {
-		return err
+		return errorhandler.StatusError{
+			Err:  err,
+			Code: http.StatusInternalServerError,
+		}
 	}
-	_, err = stmt.Exec(nil, email, "000000")
+	_, err = stmt.Exec(email, "000000")
+	if err != nil {
+		return errorhandler.StatusError{
+			Err:  err,
+			Code: http.StatusInternalServerError,
+		}
+	}
 
-	return err
+	return nil
 }
