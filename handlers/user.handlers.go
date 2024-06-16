@@ -1,7 +1,7 @@
 package handlers
 
 import (
-	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -9,13 +9,14 @@ import (
 	"github.com/bmg-c/product-diary/logger"
 	"github.com/bmg-c/product-diary/services"
 	"github.com/bmg-c/product-diary/views"
+	"github.com/bmg-c/product-diary/views/user_views"
 )
 
 type UserService interface {
 	GetUserByID(id int) (services.UserPublic, error)
 	GetUsersAll() ([]services.UserPublic, error)
-	RegisterUser(ur services.UserRegister) error
-	ConfirmRegister(ucr services.UserConfirmRegister) error
+	SigninUser(ur services.UserSignin) error
+	ConfirmSignin(ucr services.UserConfirmSignin) error
 }
 
 func NewUserHandler(us UserService) *UserHandler {
@@ -28,61 +29,120 @@ type UserHandler struct {
 	UserService UserService
 }
 
-func (uh *UserHandler) HandleRegisterUser(w http.ResponseWriter, r *http.Request) {
-	var ur services.UserRegister
-	err := json.NewDecoder(r.Body).Decode(&ur)
+func (uh *UserHandler) HandleUsersPage(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/html")
+	err := user_views.UsersPage().Render(r.Context(), w)
 	if err != nil {
-		code := errorhandler.GetStatusCode(err)
-		if code >= 500 {
-			logger.Error.Println("Failed to decode request body: " + err.Error())
-		}
+		code := http.StatusInternalServerError
 		w.WriteHeader(code)
-		w.Header().Set("Content-Type", "text/html")
 		views.ErrorIndex(code, http.StatusText(code)).Render(r.Context(), w)
 		return
 	}
-	err = uh.UserService.RegisterUser(ur)
+	w.WriteHeader(http.StatusOK)
+}
+
+func (uh *UserHandler) HandleSigninIndex(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/html")
+
+	err := user_views.SigninIndex().Render(r.Context(), w)
+	if err != nil {
+		code := http.StatusInternalServerError
+		w.WriteHeader(code)
+		w.Write([]byte(err.Error()))
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+}
+
+func (uh *UserHandler) HandleControlsIndex(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/html")
+
+	err := user_views.UserControls(false).Render(r.Context(), w)
+	if err != nil {
+		code := http.StatusInternalServerError
+		w.WriteHeader(code)
+		w.Write([]byte(err.Error()))
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+}
+
+func (uh *UserHandler) HandleSigninSignin(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/html")
+
+	err := r.ParseForm()
+	email := r.Form.Get("email")
+	if email == "" {
+		err = fmt.Errorf("Email is not provided")
+	}
+	if err != nil {
+		w.WriteHeader(http.StatusUnprocessableEntity)
+		w.Write([]byte(err.Error()))
+		return
+	}
+
+	err = uh.UserService.SigninUser(services.UserSignin{
+		Email: email,
+	})
 	if err != nil {
 		code := errorhandler.GetStatusCode(err)
 		if code >= 500 {
 			logger.Error.Println("Failed to register user: " + err.Error())
 		}
 		w.WriteHeader(code)
-		w.Header().Set("Content-Type", "text/html")
-		views.ErrorIndex(code, http.StatusText(code)).Render(r.Context(), w)
+		w.Write([]byte(err.Error()))
 		return
 	}
-	w.Write([]byte("Successfully sent confirmation code to " + ur.Email))
+	err = user_views.ConfirmSignin(email).Render(r.Context(), w)
+	if err != nil {
+		code := http.StatusInternalServerError
+		w.WriteHeader(code)
+		w.Write([]byte(err.Error()))
+		return
+	}
+	w.WriteHeader(http.StatusOK)
 }
 
-func (uh *UserHandler) HandleConfirmRegister(w http.ResponseWriter, r *http.Request) {
-	var ucr services.UserConfirmRegister
-	err := json.NewDecoder(r.Body).Decode(&ucr)
+func (uh *UserHandler) HandleConfirmSignin(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/html")
+
+	err := r.ParseForm()
+	email := r.Form.Get("email")
+	code := r.Form.Get("code")
+	if email == "" || code == "" {
+		err = fmt.Errorf("Code is not provided")
+	}
 	if err != nil {
-		code := errorhandler.GetStatusCode(err)
-		if code >= 500 {
-			logger.Error.Println("Failed to decode request body: " + err.Error())
-		}
-		w.WriteHeader(code)
-		w.Header().Set("Content-Type", "text/html")
-		views.ErrorIndex(code, http.StatusText(code)).Render(r.Context(), w)
+		w.WriteHeader(http.StatusUnprocessableEntity)
+		w.Write([]byte(err.Error()))
 		return
 	}
-	err = uh.UserService.ConfirmRegister(ucr)
+
+	err = uh.UserService.ConfirmSignin(services.UserConfirmSignin{
+		Email: email,
+		Code:  code,
+	})
 	if err != nil {
 		code := errorhandler.GetStatusCode(err)
 		if code >= 500 {
 			logger.Error.Println("Failed to confirm confirmation code: " + err.Error())
 		}
 		w.WriteHeader(code)
-		w.Header().Set("Content-Type", "text/html")
-		views.ErrorIndex(code, http.StatusText(code)).Render(r.Context(), w)
+		w.Write([]byte(err.Error()))
 		return
 	}
-	w.Write([]byte("User login info was sent to " + ucr.Email))
+	err = user_views.EndSignin(email).Render(r.Context(), w)
+	if err != nil {
+		code := http.StatusInternalServerError
+		w.WriteHeader(code)
+		w.Write([]byte(err.Error()))
+		return
+	}
+	w.WriteHeader(http.StatusOK)
 }
 
 func (uh *UserHandler) HandleGetUsersAll(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/html")
 	users, err := uh.UserService.GetUsersAll()
 	if err != nil {
 		code := errorhandler.GetStatusCode(err)
@@ -90,25 +150,21 @@ func (uh *UserHandler) HandleGetUsersAll(w http.ResponseWriter, r *http.Request)
 			logger.Error.Println("Failed to get users from the database: " + err.Error())
 		}
 		w.WriteHeader(code)
-		w.Header().Set("Content-Type", "text/html")
-		views.ErrorIndex(code, http.StatusText(code)).Render(r.Context(), w)
+		w.Write([]byte(err.Error()))
 		return
 	}
 
-	w.Header().Set("Content-Type", "text/html")
-	views.UserListIndex(users).Render(r.Context(), w)
+	user_views.UserlistIndex(users).Render(r.Context(), w)
 }
 
-func (uh *UserHandler) HandleGetUserByID(w http.ResponseWriter, r *http.Request) {
-	id, err := strconv.Atoi(r.PathValue("id"))
+func (uh *UserHandler) HandleGetUser(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/html")
+
+	err := r.ParseForm()
+	id, err := strconv.Atoi(r.Form.Get("id"))
 	if err != nil {
-		code := http.StatusUnprocessableEntity
-		if code >= 500 {
-			logger.Error.Println("Failed to get id from request: " + err.Error())
-		}
-		w.WriteHeader(code)
-		w.Header().Set("Content-Type", "text/html")
-		views.ErrorIndex(code, http.StatusText(code)).Render(r.Context(), w)
+		w.WriteHeader(http.StatusUnprocessableEntity)
+		w.Write([]byte(err.Error()))
 		return
 	}
 
@@ -119,11 +175,21 @@ func (uh *UserHandler) HandleGetUserByID(w http.ResponseWriter, r *http.Request)
 			logger.Error.Println("Failed to get user from the database: " + err.Error())
 		}
 		w.WriteHeader(code)
-		w.Header().Set("Content-Type", "text/html")
-		views.ErrorIndex(code, http.StatusText(code)).Render(r.Context(), w)
+		w.Write([]byte(err.Error()))
 		return
 	}
 
+	user_views.User(user).Render(r.Context(), w)
+}
+
+func (uh *UserHandler) HandleUserIndex(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html")
-	views.UserIndex(user).Render(r.Context(), w)
+	err := user_views.UserIndex().Render(r.Context(), w)
+	if err != nil {
+		code := http.StatusInternalServerError
+		w.WriteHeader(code)
+		w.Write([]byte(err.Error()))
+		return
+	}
+	w.WriteHeader(http.StatusOK)
 }

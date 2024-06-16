@@ -18,11 +18,11 @@ type UserPublic struct {
 	CreatedAt time.Time `json:"created_at,omitempty"`
 }
 
-type UserRegister struct {
+type UserSignin struct {
 	Email string `json:"email"`
 }
 
-type UserConfirmRegister struct {
+type UserConfirmSignin struct {
 	Email string `json:"email"`
 	Code  string `json:"code"`
 }
@@ -46,7 +46,7 @@ type UserService struct {
 	CodeStore  *db.Store
 }
 
-func (us *UserService) RegisterUser(ur UserRegister) error {
+func (us *UserService) SigninUser(ur UserSignin) error {
 	_, err := mail.ParseAddress(ur.Email)
 	if err != nil {
 		return err
@@ -62,10 +62,7 @@ func (us *UserService) RegisterUser(ur UserRegister) error {
 		return err
 	}
 	if isCodeSent {
-		return errorhandler.StatusError{
-			Err:  fmt.Errorf("Code has already been sent"),
-			Code: http.StatusUnprocessableEntity,
-		}
+		return nil
 	}
 
 	err = us.sendCode(ur.Email)
@@ -75,7 +72,7 @@ func (us *UserService) RegisterUser(ur UserRegister) error {
 	return nil
 }
 
-func (us *UserService) ConfirmRegister(ucr UserConfirmRegister) error {
+func (us *UserService) ConfirmSignin(ucr UserConfirmSignin) error {
 	err := us.deleteExpiredCodes()
 	if err != nil {
 		return err

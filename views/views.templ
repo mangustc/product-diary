@@ -2,7 +2,7 @@ package views
 
 import "strconv"
 
-templ Index(title string) {
+templ Layout(title string) {
 	<!DOCTYPE html>
 	<head>
 		<title>{ title }</title>
@@ -16,7 +16,7 @@ templ Index(title string) {
 }
 
 templ ErrorIndex(code int, msg string) {
-	@Index(strconv.Itoa(code) + " - " + msg) {
+	@Layout(strconv.Itoa(code) + " - " + msg) {
 		<span>{ strconv.Itoa(code) + " - " + msg }</span>
 	}
 }

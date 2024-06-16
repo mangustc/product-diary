@@ -40,10 +40,14 @@ func main() {
 	}
 	us := services.NewUserService(services.UserPublic{}, userStore, codeStore)
 	uh := handlers.NewUserHandler(us)
-	router.HandleFunc("GET /users/{id}", uh.HandleGetUserByID)
-	router.HandleFunc("GET /users", uh.HandleGetUsersAll)
-	router.HandleFunc("POST /users/register", uh.HandleRegisterUser)
-	router.HandleFunc("POST /users/confirmregister", uh.HandleConfirmRegister)
+	router.HandleFunc("GET /users", uh.HandleUsersPage)
+	router.HandleFunc("GET /api/users/controls/index", uh.HandleControlsIndex)
+	router.HandleFunc("GET /api/users/userlist/index", uh.HandleGetUsersAll)
+	router.HandleFunc("GET /api/users/user/index", uh.HandleUserIndex)
+	router.HandleFunc("GET /api/users/signin/index", uh.HandleSigninIndex)
+	router.HandleFunc("POST /api/users/user/getuser", uh.HandleGetUser)
+	router.HandleFunc("POST /api/users/signin/signin", uh.HandleSigninSignin)
+	router.HandleFunc("POST /api/users/signin/confirmsignin", uh.HandleConfirmSignin)
 
 	port := ":1323"
 	middlewareStack := middleware.CreateStack(

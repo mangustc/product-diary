@@ -1,0 +1,119 @@
+package user_views
+
+import (
+	"github.com/bmg-c/product-diary/services"
+	"github.com/bmg-c/product-diary/views"
+)
+
+templ LoginIndex() {
+	<form id="user-login">
+		<input type="email" name="email" placeholder="email"/>
+		<input type="password" name="password" placeholder="password"/>
+		<button
+			type="button"
+			hx-post="/api/users/login/login"
+			hx-target="#user-login"
+			hx-swap="outerHTML"
+		>Login</button>
+	</form>
+}
+
+templ EndSignin(email string) {
+	<span>Login information has been sent to { email }</span>
+}
+
+templ ConfirmSignin(email string) {
+	<form id="user-signin">
+		<input type="email" name="email" placeholder="email" value={ email } readonly/>
+		<input type="text" name="code" placeholder="code"/>
+		<button
+			type="button"
+			hx-post="/api/users/signin/confirmsignin"
+			hx-target="#user-signin"
+			hx-swap="outerHTML"
+		>Signin</button>
+	</form>
+}
+
+templ SigninIndex() {
+	<form id="user-signin">
+		<input type="email" name="email" placeholder="email"/>
+		<button
+			type="button"
+			hx-post="/api/users/signin/signin"
+			hx-target="#user-signin"
+			hx-swap="outerHTML"
+		>Signin</button>
+	</form>
+}
+
+templ User(user services.UserPublic) {
+	<span>{ user.Email }</span>
+}
+
+templ UserIndex() {
+	<form>
+		<input type="number" name="id"/>
+		<button type="button" hx-post="/api/users/user/getuser" hx-target="#user-output-user">Find user</button>
+	</form>
+	<div id="user-output-user"></div>
+}
+
+templ UserlistIndex(ul []services.UserPublic) {
+	<ul>
+		for _, user := range ul {
+			<li>
+				@User(user)
+			</li>
+		}
+	</ul>
+}
+
+templ UserControls(authorized bool) {
+	<button
+		type="button"
+		hx-target="#user-output"
+		hx-get="/api/users/userlist/index"
+		hx-on::after-request="document.getElementById('user-title-section').innerHTML = event.target.innerHTML"
+	>User List</button>
+	<button
+		type="button"
+		hx-target="#user-output"
+		hx-get="/api/users/user/index"
+		hx-on::after-request="document.getElementById('user-title-section').innerHTML = event.target.innerHTML"
+	>User by ID</button>
+	if authorized {
+		<button
+			type="button"
+			hx-target="#user-output"
+			hx-get="/api/users/profile/index"
+			hx-on::after-request="document.getElementById('user-title-section').innerHTML = event.target.innerHTML"
+		>Profile Info</button>
+		<button
+			type="button"
+			hx-target="#user-output"
+			hx-get="/api/users/logout/logout"
+		>Logout</button>
+	} else {
+		<button
+			type="button"
+			hx-target="#user-output"
+			hx-get="/api/users/signin/index"
+			hx-on::after-request="document.getElementById('user-title-section').innerHTML = event.target.innerHTML"
+		>Sign in</button>
+		<button
+			type="button"
+			hx-target="#user-output"
+			hx-get="/api/users/login/index"
+			hx-on::after-request="document.getElementById('user-title-section').innerHTML = event.target.innerHTML"
+		>Log in</button>
+	}
+}
+
+templ UsersPage() {
+	@views.Layout("Users") {
+		<h3>User Control: <span id="user-title-section">User List</span></h3>
+		<div id="user-control-buttons" hx-get="/api/users/controls/index" hx-trigger="load"></div>
+		<div id="user-output" hx-get="/api/users/userlist/index" hx-trigger="load"></div>
+	}
+}
