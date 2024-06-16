@@ -3,32 +3,32 @@ package views
 import "github.com/bmg-c/product-diary/services"
 
 templ User(user services.UserPublic) {
-<div>
-    <span>
-        { user.Email }
-    </span>
-</div>
+	<div>
+		<span>
+			{ user.Email }
+		</span>
+	</div>
 }
 
 templ UserList(ul []services.UserPublic) {
-<ul>
-    for _, user := range ul {
-    <li>
-        @User(user)
-    </li>
-    }
-</ul>
+	<ul>
+		for _, user := range ul {
+			<li>
+				@User(user)
+			</li>
+		}
+	</ul>
 }
 
 templ UserIndex(user services.UserPublic) {
-@Index("Пользователь - " + user.Username) {
-@User(user)
-}
+	@Index("Пользователь - " + user.Username) {
+		@User(user)
+	}
 }
 
 templ UserListIndex(ul []services.UserPublic) {
-@Index("Пользователи") {
-<h3>Users: </h3>
-@UserList(ul)
-}
+	@Index("Пользователи") {
+		<h3>Users: </h3>
+		@UserList(ul)
+	}
 }

@@ -5,8 +5,10 @@ import (
 	"os"
 )
 
-var Error *log.Logger = log.New(os.Stdout, "ERROR\t", log.Ldate|log.Ltime|log.Lshortfile)
-var Info *log.Logger = log.New(os.Stdout, "INFO\t", log.Ldate|log.Ltime)
+var (
+	Error *log.Logger = log.New(os.Stdout, "ERROR\t", log.Ldate|log.Ltime|log.Lshortfile)
+	Info  *log.Logger = log.New(os.Stdout, "INFO\t", log.Ldate|log.Ltime)
+)
 
 func Infof(format string, v ...any) {
 	Info.Printf(format, v...)
