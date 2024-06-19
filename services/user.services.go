@@ -5,48 +5,25 @@ import (
 	"fmt"
 	"net/http"
 	"net/mail"
-	"time"
 
 	"github.com/bmg-c/product-diary/db"
 	"github.com/bmg-c/product-diary/errorhandler"
+	"github.com/bmg-c/product-diary/schemas/user_schemas"
 )
 
-type UserPublic struct {
-	ID        int       `json:"user_id"`
-	Username  string    `json:"username"`
-	Email     string    `json:"email"`
-	CreatedAt time.Time `json:"created_at,omitempty"`
-}
-
-type UserSignin struct {
-	Email string `json:"email"`
-}
-
-type UserConfirmSignin struct {
-	Email string `json:"email"`
-	Code  string `json:"code"`
-}
-
-type UserLogin struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
-}
-
-func NewUserService(up UserPublic, userStore *db.Store, codeStore *db.Store) *UserService {
+func NewUserService(userStore *db.Store, codeStore *db.Store) *UserService {
 	return &UserService{
-		UserPublic: up,
-		UserStore:  userStore,
-		CodeStore:  codeStore,
+		UserStore: userStore,
+		CodeStore: codeStore,
 	}
 }
 
 type UserService struct {
-	UserPublic UserPublic
-	UserStore  *db.Store
-	CodeStore  *db.Store
+	UserStore *db.Store
+	CodeStore *db.Store
 }
 
-func (us *UserService) SigninUser(ur UserSignin) error {
+func (us *UserService) SigninUser(ur user_schemas.UserSignin) error {
 	_, err := mail.ParseAddress(ur.Email)
 	if err != nil {
 		return err
@@ -72,13 +49,14 @@ func (us *UserService) SigninUser(ur UserSignin) error {
 	return nil
 }
 
-func (us *UserService) ConfirmSignin(ucr UserConfirmSignin) error {
+func (us *UserService) ConfirmSignin(ucr user_schemas.UserConfirmSignin) error {
 	err := us.deleteExpiredCodes()
 	if err != nil {
 		return err
 	}
 
-	var code string
+	var email string = ""
+	var code string = ""
 	query := `SELECT code FROM ` + us.CodeStore.TableName + ` 
 		WHERE email = ?`
 
@@ -90,9 +68,9 @@ func (us *UserService) ConfirmSignin(ucr UserConfirmSignin) error {
 		}
 	}
 
-	us.UserPublic.Email = ucr.Email
+	email = ucr.Email
 	err = stmt.QueryRow(
-		us.UserPublic.Email,
+		email,
 	).Scan(
 		&code,
 	)
@@ -125,82 +103,84 @@ func (us *UserService) ConfirmSignin(ucr UserConfirmSignin) error {
 	return err
 }
 
-func (us *UserService) GetUserByID(id int) (UserPublic, error) {
+func (us *UserService) GetUserByID(id uint) (user_schemas.UserPublic, error) {
+	var up user_schemas.UserPublic = user_schemas.UserPublic{}
 	query := `SELECT user_id, username, email, created_at FROM ` + us.UserStore.TableName + ` 
 		WHERE user_id = ?`
 
 	stmt, err := us.UserStore.DB.Prepare(query)
 	if err != nil {
-		return UserPublic{}, errorhandler.StatusError{
+		return user_schemas.UserPublic{}, errorhandler.StatusError{
 			Err:  err,
 			Code: http.StatusInternalServerError,
 		}
 	}
 	defer stmt.Close()
 
-	us.UserPublic.ID = id
+	up.UserID = id
 	err = stmt.QueryRow(
-		us.UserPublic.ID,
+		up.UserID,
 	).Scan(
-		&us.UserPublic.ID,
-		&us.UserPublic.Username,
-		&us.UserPublic.Email,
-		&us.UserPublic.CreatedAt,
+		&up.UserID,
+		&up.Username,
+		&up.Email,
+		&up.CreatedAt,
 	)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return UserPublic{}, errorhandler.StatusError{
+			return user_schemas.UserPublic{}, errorhandler.StatusError{
 				Err:  err,
 				Code: http.StatusNotFound,
 			}
 		}
-		return UserPublic{}, errorhandler.StatusError{
+		return user_schemas.UserPublic{}, errorhandler.StatusError{
 			Err:  err,
 			Code: http.StatusInternalServerError,
 		}
 	}
 
-	return us.UserPublic, nil
+	return up, nil
 }
 
-func (us *UserService) GetUsersAll() ([]UserPublic, error) {
+func (us *UserService) GetUsersAll() ([]user_schemas.UserPublic, error) {
+	var up user_schemas.UserPublic = user_schemas.UserPublic{}
 	query := `SELECT user_id, username, email, created_at FROM ` + us.UserStore.TableName + ` ORDER BY created_at DESC`
 
 	rows, err := us.UserStore.DB.Query(query)
 	if err != nil {
-		return []UserPublic{}, errorhandler.StatusError{
+		return []user_schemas.UserPublic{}, errorhandler.StatusError{
 			Err:  err,
 			Code: http.StatusInternalServerError,
 		}
 	}
 	defer rows.Close()
 
-	users := []UserPublic{}
+	users := []user_schemas.UserPublic{}
 	for rows.Next() {
 		err = rows.Scan(
-			&us.UserPublic.ID,
-			&us.UserPublic.Username,
-			&us.UserPublic.Email,
-			&us.UserPublic.CreatedAt,
+			&up.UserID,
+			&up.Username,
+			&up.Email,
+			&up.CreatedAt,
 		)
 		if err != nil {
-			return []UserPublic{}, errorhandler.StatusError{
+			return []user_schemas.UserPublic{}, errorhandler.StatusError{
 				Err:  err,
 				Code: http.StatusInternalServerError,
 			}
 		}
 
-		users = append(users, us.UserPublic)
+		users = append(users, up)
 	}
 
 	return users, nil
 }
 
-func (us *UserService) sendUserLogin(ul UserLogin) error {
+func (us *UserService) sendUserLogin(ul user_schemas.UserLogin) error {
 	return nil
 }
 
-func (us *UserService) addUserToDB(email string) (UserLogin, error) {
+func (us *UserService) addUserToDB(email string) (user_schemas.UserLogin, error) {
 	password := "awooga"
 
 	query := `INSERT INTO ` + us.UserStore.TableName + `(user_id, username, email, password, created_at)
@@ -209,20 +189,20 @@ func (us *UserService) addUserToDB(email string) (UserLogin, error) {
 	stmt, err := us.CodeStore.DB.Prepare(query)
 	defer stmt.Close()
 	if err != nil {
-		return UserLogin{}, errorhandler.StatusError{
+		return user_schemas.UserLogin{}, errorhandler.StatusError{
 			Err:  err,
 			Code: http.StatusInternalServerError,
 		}
 	}
 	_, err = stmt.Exec("master", email, password)
 	if err != nil {
-		return UserLogin{}, errorhandler.StatusError{
+		return user_schemas.UserLogin{}, errorhandler.StatusError{
 			Err:  err,
 			Code: http.StatusInternalServerError,
 		}
 	}
 
-	return UserLogin{
+	return user_schemas.UserLogin{
 		Email:    email,
 		Password: password,
 	}, nil

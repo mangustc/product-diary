@@ -7,16 +7,17 @@ import (
 
 	"github.com/bmg-c/product-diary/errorhandler"
 	"github.com/bmg-c/product-diary/logger"
-	"github.com/bmg-c/product-diary/services"
+	"github.com/bmg-c/product-diary/schemas"
+	"github.com/bmg-c/product-diary/schemas/user_schemas"
 	"github.com/bmg-c/product-diary/views"
 	"github.com/bmg-c/product-diary/views/user_views"
 )
 
 type UserService interface {
-	GetUserByID(id int) (services.UserPublic, error)
-	GetUsersAll() ([]services.UserPublic, error)
-	SigninUser(ur services.UserSignin) error
-	ConfirmSignin(ucr services.UserConfirmSignin) error
+	GetUserByID(id uint) (user_schemas.UserPublic, error)
+	GetUsersAll() ([]user_schemas.UserPublic, error)
+	SigninUser(ur user_schemas.UserSignin) error
+	ConfirmSignin(ucr user_schemas.UserConfirmSignin) error
 }
 
 func NewUserHandler(us UserService) *UserHandler {
@@ -31,6 +32,7 @@ type UserHandler struct {
 
 func (uh *UserHandler) HandleUsersPage(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html")
+
 	err := user_views.UsersPage().Render(r.Context(), w)
 	if err != nil {
 		code := http.StatusInternalServerError
@@ -38,7 +40,6 @@ func (uh *UserHandler) HandleUsersPage(w http.ResponseWriter, r *http.Request) {
 		views.ErrorIndex(code, http.StatusText(code)).Render(r.Context(), w)
 		return
 	}
-	w.WriteHeader(http.StatusOK)
 }
 
 func (uh *UserHandler) HandleSigninIndex(w http.ResponseWriter, r *http.Request) {
@@ -51,7 +52,6 @@ func (uh *UserHandler) HandleSigninIndex(w http.ResponseWriter, r *http.Request)
 		w.Write([]byte(err.Error()))
 		return
 	}
-	w.WriteHeader(http.StatusOK)
 }
 
 func (uh *UserHandler) HandleControlsIndex(w http.ResponseWriter, r *http.Request) {
@@ -64,16 +64,17 @@ func (uh *UserHandler) HandleControlsIndex(w http.ResponseWriter, r *http.Reques
 		w.Write([]byte(err.Error()))
 		return
 	}
-	w.WriteHeader(http.StatusOK)
 }
 
 func (uh *UserHandler) HandleSigninSignin(w http.ResponseWriter, r *http.Request) {
+	var input user_schemas.UserSignin = user_schemas.UserSignin{}
 	w.Header().Set("Content-Type", "text/html")
 
 	err := r.ParseForm()
-	email := r.Form.Get("email")
-	if email == "" {
-		err = fmt.Errorf("Email is not provided")
+	input.Email = r.Form.Get("email")
+	ve := schemas.ValidateStruct(input)
+	if ve != nil {
+		err = fmt.Errorf("Email should have format like mail@example.com")
 	}
 	if err != nil {
 		w.WriteHeader(http.StatusUnprocessableEntity)
@@ -81,9 +82,7 @@ func (uh *UserHandler) HandleSigninSignin(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	err = uh.UserService.SigninUser(services.UserSignin{
-		Email: email,
-	})
+	err = uh.UserService.SigninUser(input)
 	if err != nil {
 		code := errorhandler.GetStatusCode(err)
 		if code >= 500 {
@@ -93,24 +92,25 @@ func (uh *UserHandler) HandleSigninSignin(w http.ResponseWriter, r *http.Request
 		w.Write([]byte(err.Error()))
 		return
 	}
-	err = user_views.ConfirmSignin(email).Render(r.Context(), w)
+	err = user_views.ConfirmSignin(input.Email).Render(r.Context(), w)
 	if err != nil {
 		code := http.StatusInternalServerError
 		w.WriteHeader(code)
 		w.Write([]byte(err.Error()))
 		return
 	}
-	w.WriteHeader(http.StatusOK)
 }
 
 func (uh *UserHandler) HandleConfirmSignin(w http.ResponseWriter, r *http.Request) {
+	var input user_schemas.UserConfirmSignin = user_schemas.UserConfirmSignin{}
 	w.Header().Set("Content-Type", "text/html")
 
 	err := r.ParseForm()
-	email := r.Form.Get("email")
-	code := r.Form.Get("code")
-	if email == "" || code == "" {
-		err = fmt.Errorf("Code is not provided")
+	input.Email = r.Form.Get("email")
+	input.Code = r.Form.Get("code")
+	ve := schemas.ValidateStruct(input)
+	if ve != nil {
+		err = fmt.Errorf("Confirmation codes do not match")
 	}
 	if err != nil {
 		w.WriteHeader(http.StatusUnprocessableEntity)
@@ -118,10 +118,7 @@ func (uh *UserHandler) HandleConfirmSignin(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	err = uh.UserService.ConfirmSignin(services.UserConfirmSignin{
-		Email: email,
-		Code:  code,
-	})
+	err = uh.UserService.ConfirmSignin(input)
 	if err != nil {
 		code := errorhandler.GetStatusCode(err)
 		if code >= 500 {
@@ -131,14 +128,13 @@ func (uh *UserHandler) HandleConfirmSignin(w http.ResponseWriter, r *http.Reques
 		w.Write([]byte(err.Error()))
 		return
 	}
-	err = user_views.EndSignin(email).Render(r.Context(), w)
+	err = user_views.EndSignin(input.Email).Render(r.Context(), w)
 	if err != nil {
 		code := http.StatusInternalServerError
 		w.WriteHeader(code)
 		w.Write([]byte(err.Error()))
 		return
 	}
-	w.WriteHeader(http.StatusOK)
 }
 
 func (uh *UserHandler) HandleGetUsersAll(w http.ResponseWriter, r *http.Request) {
@@ -158,17 +154,23 @@ func (uh *UserHandler) HandleGetUsersAll(w http.ResponseWriter, r *http.Request)
 }
 
 func (uh *UserHandler) HandleGetUser(w http.ResponseWriter, r *http.Request) {
+	var input user_schemas.UserGetByID = user_schemas.UserGetByID{}
 	w.Header().Set("Content-Type", "text/html")
 
 	err := r.ParseForm()
-	id, err := strconv.Atoi(r.Form.Get("id"))
+	id64, err := strconv.ParseUint(r.Form.Get("id"), 10, 0)
+	input.UserID = uint(id64)
+	ve := schemas.ValidateStruct(input)
+	if ve != nil {
+		err = fmt.Errorf("ID should be greater than 0")
+	}
 	if err != nil {
 		w.WriteHeader(http.StatusUnprocessableEntity)
 		w.Write([]byte(err.Error()))
 		return
 	}
 
-	user, err := uh.UserService.GetUserByID(id)
+	user, err := uh.UserService.GetUserByID(input.UserID)
 	if err != nil {
 		code := errorhandler.GetStatusCode(err)
 		if code >= 500 {
@@ -191,5 +193,4 @@ func (uh *UserHandler) HandleUserIndex(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(err.Error()))
 		return
 	}
-	w.WriteHeader(http.StatusOK)
 }

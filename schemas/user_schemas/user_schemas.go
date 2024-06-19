@@ -20,6 +20,10 @@ type UserConfirmSignin struct {
 	Code  string `json:"code" format:"code"`
 }
 
+type UserGetByID struct {
+	UserID uint `json:"user_id" format:"id"`
+}
+
 type UserLogin struct {
 	Email    string `json:"email" format:"email"`
 	Password string `json:"password" format:"password"`

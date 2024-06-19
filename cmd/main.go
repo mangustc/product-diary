@@ -46,7 +46,7 @@ func main() {
 	} else {
 		logger.Info.Println("Successfully connected code store")
 	}
-	us := services.NewUserService(services.UserPublic{}, userStore, codeStore)
+	us := services.NewUserService(userStore, codeStore)
 	uh := handlers.NewUserHandler(us)
 	router.HandleFunc("GET /users", uh.HandleUsersPage)
 	router.HandleFunc("GET /api/users/controls/index", uh.HandleControlsIndex)

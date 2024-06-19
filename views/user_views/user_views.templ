@@ -1,8 +1,8 @@
 package user_views
 
 import (
-	"github.com/bmg-c/product-diary/services"
 	"github.com/bmg-c/product-diary/views"
+	"github.com/bmg-c/product-diary/schemas/user_schemas"
 )
 
 templ LoginIndex() {
@@ -47,7 +47,7 @@ templ SigninIndex() {
 	</form>
 }
 
-templ User(user services.UserPublic) {
+templ User(user user_schemas.UserPublic) {
 	<span>{ user.Email }</span>
 }
 
@@ -59,7 +59,7 @@ templ UserIndex() {
 	<div id="user-output-user"></div>
 }
 
-templ UserlistIndex(ul []services.UserPublic) {
+templ UserlistIndex(ul []user_schemas.UserPublic) {
 	<ul>
 		for _, user := range ul {
 			<li>
