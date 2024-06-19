@@ -8,9 +8,17 @@ import (
 	"github.com/bmg-c/product-diary/logger"
 	"github.com/bmg-c/product-diary/middleware"
 	"github.com/bmg-c/product-diary/services"
+	"github.com/bmg-c/product-diary/tests"
 )
 
 func main() {
+	err := tests.TestValidation()
+	if err != nil {
+		logger.Error.Println(err.Error())
+	} else {
+		logger.Info.Println("Tests passed successfully")
+	}
+
 	router := http.NewServeMux()
 
 	userStore, err := db.NewStore("database.db", "users",
