@@ -14,7 +14,7 @@ import (
 )
 
 type UserService interface {
-	GetUserByID(id uint) (user_schemas.UserPublic, error)
+	GetUser(userInfo user_schemas.GetUser) (user_schemas.UserPublic, error)
 	GetUsersAll() ([]user_schemas.UserPublic, error)
 	SigninUser(ur user_schemas.UserSignin) error
 	ConfirmSignin(ucr user_schemas.UserConfirmSignin) error
@@ -154,12 +154,13 @@ func (uh *UserHandler) HandleGetUsersAll(w http.ResponseWriter, r *http.Request)
 }
 
 func (uh *UserHandler) HandleGetUser(w http.ResponseWriter, r *http.Request) {
-	var input user_schemas.UserGetByID = user_schemas.UserGetByID{}
+	var input user_schemas.GetUser = user_schemas.GetUser{}
 	w.Header().Set("Content-Type", "text/html")
 
 	err := r.ParseForm()
 	id64, err := strconv.ParseUint(r.Form.Get("id"), 10, 0)
 	input.UserID = uint(id64)
+	input.Email = r.Form.Get("email")
 	ve := schemas.ValidateStruct(input)
 	if ve != nil {
 		err = fmt.Errorf("ID should be greater than 0")
@@ -170,7 +171,7 @@ func (uh *UserHandler) HandleGetUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := uh.UserService.GetUserByID(input.UserID)
+	user, err := uh.UserService.GetUser(input)
 	if err != nil {
 		code := errorhandler.GetStatusCode(err)
 		if code >= 500 {

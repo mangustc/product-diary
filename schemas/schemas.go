@@ -347,3 +347,8 @@ func ValidateStruct(s interface{}) ValidationErrors {
 	}
 	return nil
 }
+
+func IsZero(v any) bool {
+	vr := reflect.ValueOf(v)
+	return vr.IsZero()
+}

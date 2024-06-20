@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/bmg-c/product-diary/db"
+	"github.com/bmg-c/product-diary/db/user_db"
 	"github.com/bmg-c/product-diary/handlers"
 	"github.com/bmg-c/product-diary/logger"
 	"github.com/bmg-c/product-diary/middleware"
@@ -46,7 +47,11 @@ func main() {
 	} else {
 		logger.Info.Println("Successfully connected code store")
 	}
-	us := services.NewUserService(userStore, codeStore)
+	udb, err := user_db.NewUserDB(userStore, codeStore)
+	if err != nil {
+		logger.Error.Println("Error creating user database layer: " + err.Error())
+	}
+	us := services.NewUserService(udb)
 	uh := handlers.NewUserHandler(us)
 	router.HandleFunc("GET /users", uh.HandleUsersPage)
 	router.HandleFunc("GET /api/users/controls/index", uh.HandleControlsIndex)

@@ -28,3 +28,16 @@ type UserLogin struct {
 	Email    string `json:"email" format:"email"`
 	Password string `json:"password" format:"password"`
 }
+
+type UserDB struct {
+	UserID    uint      `json:"user_id" format:"id"`
+	Username  string    `json:"username" format:"username"`
+	Email     string    `json:"email" format:"email"`
+	Password  string    `json:"password" format:"password"`
+	CreatedAt time.Time `json:"created_at,omitempty"`
+}
+
+type GetUser struct {
+	UserID uint   `json:"user_id" format:"id" validate:"omitzero"`
+	Email  string `json:"email" format:"email" validate:"omitzero"`
+}
