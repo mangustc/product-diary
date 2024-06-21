@@ -7,6 +7,7 @@ import (
 
 	"github.com/bmg-c/product-diary/db"
 	"github.com/bmg-c/product-diary/errorhandler"
+	L "github.com/bmg-c/product-diary/localization"
 	"github.com/bmg-c/product-diary/schemas"
 	"github.com/bmg-c/product-diary/schemas/user_schemas"
 )
@@ -30,7 +31,7 @@ func (udb *UserDB) AddCode(email string) error {
 	err := udb.deleteExpiredCodes()
 	if err != nil {
 		return errorhandler.StatusError{
-			Err:  err,
+			Err:  L.GetError(L.MsgErrorInternalServer),
 			Code: http.StatusInternalServerError,
 		}
 	}
@@ -42,14 +43,14 @@ func (udb *UserDB) AddCode(email string) error {
 	defer stmt.Close()
 	if err != nil {
 		return errorhandler.StatusError{
-			Err:  err,
+			Err:  L.GetError(L.MsgErrorInternalServer),
 			Code: http.StatusInternalServerError,
 		}
 	}
 	_, err = stmt.Exec(email, "000000")
 	if err != nil {
 		return errorhandler.StatusError{
-			Err:  err,
+			Err:  L.GetError(L.MsgErrorInternalServer),
 			Code: http.StatusInternalServerError,
 		}
 	}
@@ -61,7 +62,7 @@ func (udb *UserDB) GetCode(email string) (string, error) {
 	err := udb.deleteExpiredCodes()
 	if err != nil {
 		return "", errorhandler.StatusError{
-			Err:  err,
+			Err:  L.GetError(L.MsgErrorInternalServer),
 			Code: http.StatusInternalServerError,
 		}
 	}
@@ -75,7 +76,7 @@ func (udb *UserDB) GetCode(email string) (string, error) {
 			return "", nil
 		}
 		return "", errorhandler.StatusError{
-			Err:  err,
+			Err:  L.GetError(L.MsgErrorInternalServer),
 			Code: http.StatusInternalServerError,
 		}
 	}
@@ -93,14 +94,14 @@ func (udb *UserDB) AddUser(email string) error {
 	defer stmt.Close()
 	if err != nil {
 		return errorhandler.StatusError{
-			Err:  err,
+			Err:  L.GetError(L.MsgErrorInternalServer),
 			Code: http.StatusInternalServerError,
 		}
 	}
 	_, err = stmt.Exec(username, email, password)
 	if err != nil {
 		return errorhandler.StatusError{
-			Err:  err,
+			Err:  L.GetError(L.MsgErrorInternalServer),
 			Code: http.StatusInternalServerError,
 		}
 	}
@@ -123,7 +124,7 @@ func (udb *UserDB) GetUser(userInfo user_schemas.GetUser) (user_schemas.UserDB, 
 		arg = userInfo.Email
 	} else {
 		return user_schemas.UserDB{}, errorhandler.StatusError{
-			Err:  fmt.Errorf("No info provided about user"),
+			Err:  L.GetError(L.MsgErrorGetUserNoInfo),
 			Code: http.StatusUnprocessableEntity,
 		}
 	}
@@ -131,7 +132,7 @@ func (udb *UserDB) GetUser(userInfo user_schemas.GetUser) (user_schemas.UserDB, 
 	stmt, err := udb.userStore.DB.Prepare(query)
 	if err != nil {
 		return user_schemas.UserDB{}, errorhandler.StatusError{
-			Err:  err,
+			Err:  L.GetError(L.MsgErrorInternalServer),
 			Code: http.StatusInternalServerError,
 		}
 	}
@@ -149,12 +150,12 @@ func (udb *UserDB) GetUser(userInfo user_schemas.GetUser) (user_schemas.UserDB, 
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return user_schemas.UserDB{}, errorhandler.StatusError{
-				Err:  err,
+				Err:  L.GetError(L.MsgErrorGetUserNotFound),
 				Code: http.StatusNotFound,
 			}
 		}
 		return user_schemas.UserDB{}, errorhandler.StatusError{
-			Err:  err,
+			Err:  L.GetError(L.MsgErrorInternalServer),
 			Code: http.StatusInternalServerError,
 		}
 	}
@@ -162,7 +163,7 @@ func (udb *UserDB) GetUser(userInfo user_schemas.GetUser) (user_schemas.UserDB, 
 	ve := schemas.ValidateStruct(up)
 	if ve != nil {
 		return user_schemas.UserDB{}, errorhandler.StatusError{
-			Err:  fmt.Errorf(http.StatusText(http.StatusInternalServerError)),
+			Err:  L.GetError(L.MsgErrorInternalServer),
 			Code: http.StatusInternalServerError,
 		}
 	}
@@ -178,7 +179,7 @@ func (udb *UserDB) GetUsersAll() ([]user_schemas.UserDB, error) {
 	rows, err := udb.userStore.DB.Query(query)
 	if err != nil {
 		return []user_schemas.UserDB{}, errorhandler.StatusError{
-			Err:  err,
+			Err:  L.GetError(L.MsgErrorInternalServer),
 			Code: http.StatusInternalServerError,
 		}
 	}
@@ -195,7 +196,7 @@ func (udb *UserDB) GetUsersAll() ([]user_schemas.UserDB, error) {
 		)
 		if err != nil {
 			return []user_schemas.UserDB{}, errorhandler.StatusError{
-				Err:  err,
+				Err:  L.GetError(L.MsgErrorInternalServer),
 				Code: http.StatusInternalServerError,
 			}
 		}
@@ -214,14 +215,14 @@ func (udb *UserDB) deleteExpiredCodes() error {
 	defer stmt.Close()
 	if err != nil {
 		return errorhandler.StatusError{
-			Err:  err,
+			Err:  L.GetError(L.MsgErrorInternalServer),
 			Code: http.StatusInternalServerError,
 		}
 	}
 	_, err = stmt.Exec()
 	if err != nil {
 		return errorhandler.StatusError{
-			Err:  err,
+			Err:  L.GetError(L.MsgErrorInternalServer),
 			Code: http.StatusInternalServerError,
 		}
 	}

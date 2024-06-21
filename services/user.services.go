@@ -1,10 +1,10 @@
 package services
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/bmg-c/product-diary/errorhandler"
+	L "github.com/bmg-c/product-diary/localization"
 	"github.com/bmg-c/product-diary/schemas"
 	"github.com/bmg-c/product-diary/schemas/user_schemas"
 )
@@ -52,7 +52,7 @@ func (us *UserService) ConfirmSignin(ucr user_schemas.UserConfirmSignin) error {
 	}
 	if code != ucr.Code {
 		return errorhandler.StatusError{
-			Err:  fmt.Errorf("Confirmation codes do not match"),
+			Err:  L.GetError(L.MsgErrorCodeWrong),
 			Code: http.StatusUnprocessableEntity,
 		}
 	}

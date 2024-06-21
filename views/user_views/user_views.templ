@@ -3,47 +3,48 @@ package user_views
 import (
 	"github.com/bmg-c/product-diary/views"
 	"github.com/bmg-c/product-diary/schemas/user_schemas"
+	L "github.com/bmg-c/product-diary/localization"
 )
 
-templ LoginIndex() {
+templ LoginIndex(l *L.Localizer) {
 	<form id="user-login">
-		<input type="email" name="email" placeholder="email"/>
-		<input type="password" name="password" placeholder="password"/>
+		<input type="email" name="email" placeholder={ l.GetLocalized(L.MsgEmailPlaceholder) }/>
+		<input type="password" name="password" placeholder="*******"/>
 		<button
 			type="button"
 			hx-post="/api/users/login/login"
 			hx-target="#user-login"
 			hx-swap="outerHTML"
-		>Login</button>
+		>{ l.GetLocalized(L.MsgLogIn) }</button>
 	</form>
 }
 
-templ EndSignin(email string) {
-	<span>Login information has been sent to { email }</span>
+templ EndSignin(l *L.Localizer, email string) {
+	<span>{ l.GetLocalized(L.MsgLoginInfoSent, email) }</span>
 }
 
-templ ConfirmSignin(email string) {
+templ ConfirmSignin(l *L.Localizer, email string) {
 	<form id="user-signin">
-		<input type="email" name="email" placeholder="email" value={ email } readonly/>
-		<input type="text" name="code" placeholder="code"/>
+		<input type="email" name="email" placeholder={ l.GetLocalized(L.MsgEmailPlaceholder) } value={ email } readonly/>
+		<input type="text" name="code" placeholder={ l.GetLocalized(L.MsgCodePlaceholder) }/>
 		<button
 			type="button"
 			hx-post="/api/users/signin/confirmsignin"
 			hx-target="#user-signin"
 			hx-swap="outerHTML"
-		>Signin</button>
+		>{ l.GetLocalized(L.MsgSignIn) }</button>
 	</form>
 }
 
-templ SigninIndex() {
+templ SigninIndex(l *L.Localizer) {
 	<form id="user-signin">
-		<input type="email" name="email" placeholder="email"/>
+		<input type="email" name="email" placeholder={ l.GetLocalized(L.MsgEmailPlaceholder) }/>
 		<button
 			type="button"
 			hx-post="/api/users/signin/signin"
 			hx-target="#user-signin"
 			hx-swap="outerHTML"
-		>Signin</button>
+		>{ l.GetLocalized(L.MsgSignIn) }</button>
 	</form>
 }
 
@@ -51,10 +52,10 @@ templ User(user user_schemas.UserPublic) {
 	<span>{ user.Email }</span>
 }
 
-templ UserIndex() {
+templ UserIndex(l *L.Localizer) {
 	<form>
 		<input type="number" name="id"/>
-		<button type="button" hx-post="/api/users/user/getuser" hx-target="#user-output-user">Find user</button>
+		<button type="button" hx-post="/api/users/user/getuser" hx-target="#user-output-user">{ l.GetLocalized(L.MsgFindUser) }</button>
 	</form>
 	<div id="user-output-user"></div>
 }
@@ -69,50 +70,50 @@ templ UserlistIndex(ul []user_schemas.UserPublic) {
 	</ul>
 }
 
-templ UserControls(authorized bool) {
+templ UserControls(l *L.Localizer, authorized bool) {
 	<button
 		type="button"
 		hx-target="#user-output"
 		hx-get="/api/users/userlist/index"
 		hx-on::after-request="document.getElementById('user-title-section').innerHTML = event.target.innerHTML"
-	>User List</button>
+	>{ l.GetLocalized(L.MsgUserList) }</button>
 	<button
 		type="button"
 		hx-target="#user-output"
 		hx-get="/api/users/user/index"
 		hx-on::after-request="document.getElementById('user-title-section').innerHTML = event.target.innerHTML"
-	>User by ID</button>
+	>{ l.GetLocalized(L.MsgUserByID) }</button>
 	if authorized {
 		<button
 			type="button"
 			hx-target="#user-output"
 			hx-get="/api/users/profile/index"
 			hx-on::after-request="document.getElementById('user-title-section').innerHTML = event.target.innerHTML"
-		>Profile Info</button>
+		>{ l.GetLocalized(L.MsgProfileInfo) }</button>
 		<button
 			type="button"
 			hx-target="#user-output"
 			hx-get="/api/users/logout/logout"
-		>Logout</button>
+		>{ l.GetLocalized(L.MsgLogOut) }</button>
 	} else {
 		<button
 			type="button"
 			hx-target="#user-output"
 			hx-get="/api/users/signin/index"
 			hx-on::after-request="document.getElementById('user-title-section').innerHTML = event.target.innerHTML"
-		>Sign in</button>
+		>{ l.GetLocalized(L.MsgSignIn) }</button>
 		<button
 			type="button"
 			hx-target="#user-output"
 			hx-get="/api/users/login/index"
 			hx-on::after-request="document.getElementById('user-title-section').innerHTML = event.target.innerHTML"
-		>Log in</button>
+		>{ l.GetLocalized(L.MsgLogIn) }</button>
 	}
 }
 
-templ UsersPage() {
+templ UsersPage(l *L.Localizer) {
 	@views.Layout("Users") {
-		<h3>User Control: <span id="user-title-section">User List</span></h3>
+		<h3>{ l.GetLocalized(L.MsgUserControl) }: <span id="user-title-section">{ l.GetLocalized(L.MsgUserList) }</span></h3>
 		<div id="user-control-buttons" hx-get="/api/users/controls/index" hx-trigger="load"></div>
 		<div id="user-output" hx-get="/api/users/userlist/index" hx-trigger="load"></div>
 	}
