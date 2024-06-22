@@ -16,23 +16,25 @@ type (
 )
 
 const (
-	MsgErrorTest            Msg = 0
-	MsgErrorInternalServer  Msg = 1
-	MsgErrorGetUserNoInfo   Msg = 2
-	MsgErrorGetUserNotFound Msg = 3
-	MsgErrorCodeWrong       Msg = 4
-	MsgErrorEmailWrong      Msg = 5
-	MsgLoginInfoSent        Msg = 6
-	MsgEmailPlaceholder     Msg = 7
-	MsgCodePlaceholder      Msg = 8
-	MsgSignIn               Msg = 9
-	MsgLogIn                Msg = 10
-	MsgFindUser             Msg = 11
-	MsgUserControl          Msg = 12
-	MsgUserList             Msg = 13
-	MsgUserByID             Msg = 14
-	MsgProfileInfo          Msg = 15
-	MsgLogOut               Msg = 16
+	MsgErrorTest               Msg = 0
+	MsgErrorInternalServer     Msg = 1
+	MsgErrorGetUserNoInfo      Msg = 2
+	MsgErrorGetUserNotFound    Msg = 3
+	MsgErrorCodeWrong          Msg = 4
+	MsgErrorEmailWrong         Msg = 5
+	MsgLoginInfoSent           Msg = 6
+	MsgEmailPlaceholder        Msg = 7
+	MsgCodePlaceholder         Msg = 8
+	MsgSignIn                  Msg = 9
+	MsgLogIn                   Msg = 10
+	MsgFindUser                Msg = 11
+	MsgUserControl             Msg = 12
+	MsgUserList                Msg = 13
+	MsgUserByID                Msg = 14
+	MsgProfileInfo             Msg = 15
+	MsgLogOut                  Msg = 16
+	MsgErrorGetSessionNotFound Msg = 17
+	MsgErrorPasswordWrong      Msg = 18
 )
 
 const (
@@ -180,6 +182,30 @@ var translations map[Msg]translateFunction = map[Msg]translateFunction{
 			return fmt.Sprintf("Профиль")
 		default:
 			return fmt.Sprintf("Profile")
+		}
+	},
+	MsgLogOut: func(locale Locale, args []string) string {
+		switch locale {
+		case LocaleRuRU:
+			return fmt.Sprintf("Выйти")
+		default:
+			return fmt.Sprintf("Logout")
+		}
+	},
+	MsgErrorGetSessionNotFound: func(locale Locale, args []string) string {
+		switch locale {
+		case LocaleRuRU:
+			return fmt.Sprintf("Пользовательская сессия устарела")
+		default:
+			return fmt.Sprintf("User session expired")
+		}
+	},
+	MsgErrorPasswordWrong: func(locale Locale, args []string) string {
+		switch locale {
+		case LocaleRuRU:
+			return fmt.Sprintf("Неверный пароль")
+		default:
+			return fmt.Sprintf("Wrong password")
 		}
 	},
 }

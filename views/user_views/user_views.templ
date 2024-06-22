@@ -13,8 +13,8 @@ templ LoginIndex(l *L.Localizer) {
 		<button
 			type="button"
 			hx-post="/api/users/login/login"
-			hx-target="#user-login"
-			hx-swap="outerHTML"
+			hx-target="#main"
+			hx-swap="innerHTML"
 		>{ l.GetLocalized(L.MsgLogIn) }</button>
 	</form>
 }
@@ -92,8 +92,8 @@ templ UserControls(l *L.Localizer, authorized bool) {
 		>{ l.GetLocalized(L.MsgProfileInfo) }</button>
 		<button
 			type="button"
-			hx-target="#user-output"
-			hx-get="/api/users/logout/logout"
+			hx-target="#main"
+			hx-post="/api/users/logout/logout"
 		>{ l.GetLocalized(L.MsgLogOut) }</button>
 	} else {
 		<button

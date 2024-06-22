@@ -2,6 +2,8 @@ package user_schemas
 
 import (
 	"time"
+
+	"github.com/google/uuid"
 )
 
 type UserPublic struct {
@@ -40,4 +42,13 @@ type UserDB struct {
 type GetUser struct {
 	UserID uint   `json:"user_id" format:"id" validate:"omitzero"`
 	Email  string `json:"email" format:"email" validate:"omitzero"`
+}
+
+type SessionDB struct {
+	SessionUUID uuid.UUID `json:"session_uuid"`
+	UserID      uint      `json:"user_id" format:"id"`
+}
+
+type GetSession struct {
+	SessionUUID uuid.UUID `json:"session_uuid"`
 }

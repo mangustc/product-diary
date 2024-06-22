@@ -32,6 +32,7 @@ func main() {
     );`)
 	if err != nil {
 		logger.Error.Println("Error creating user store: " + err.Error())
+		panic(err.Error())
 	} else {
 		logger.Info.Println("Successfully connected user store")
 	}
@@ -44,10 +45,23 @@ func main() {
     );`)
 	if err != nil {
 		logger.Error.Println("Error creating code store: " + err.Error())
+		panic(err.Error())
 	} else {
 		logger.Info.Println("Successfully connected code store")
 	}
-	udb, err := user_db.NewUserDB(userStore, codeStore)
+	sessionStore, err := db.NewStore("database.db", "sessions",
+		`CREATE TABLE IF NOT EXISTS sessions (
+        session_uuid VARCHAR(32) NOT NULL UNIQUE,
+        user_id INTEGER NOT NULL,
+        FOREIGN KEY (user_id) REFERENCES `+userStore.TableName+` (user_id) ON DELETE RESTRICT
+    );`)
+	if err != nil {
+		logger.Error.Println("Error creating session store: " + err.Error())
+		panic(err.Error())
+	} else {
+		logger.Info.Println("Successfully connected session store")
+	}
+	udb, err := user_db.NewUserDB(userStore, codeStore, sessionStore)
 	if err != nil {
 		logger.Error.Println("Error creating user database layer: " + err.Error())
 	}
@@ -57,10 +71,14 @@ func main() {
 	router.HandleFunc("GET /api/users/controls/index", uh.HandleControlsIndex)
 	router.HandleFunc("GET /api/users/userlist/index", uh.HandleGetUsersAll)
 	router.HandleFunc("GET /api/users/user/index", uh.HandleUserIndex)
-	router.HandleFunc("GET /api/users/signin/index", uh.HandleSigninIndex)
 	router.HandleFunc("POST /api/users/user/getuser", uh.HandleGetUser)
+	router.HandleFunc("GET /api/users/signin/index", uh.HandleSigninIndex)
 	router.HandleFunc("POST /api/users/signin/signin", uh.HandleSigninSignin)
 	router.HandleFunc("POST /api/users/signin/confirmsignin", uh.HandleConfirmSignin)
+	router.HandleFunc("GET /api/users/login/index", uh.HandleLoginIndex)
+	router.HandleFunc("POST /api/users/login/login", uh.HandleLoginLogin)
+	router.HandleFunc("GET /api/users/profile/index", uh.HandleProfileIndex)
+	router.HandleFunc("POST /api/users/logout/logout", uh.HandleLogout)
 
 	port := ":1323"
 	middlewareStack := middleware.CreateStack(

@@ -8,22 +8,26 @@ import (
 	"github.com/bmg-c/product-diary/db"
 	"github.com/bmg-c/product-diary/errorhandler"
 	L "github.com/bmg-c/product-diary/localization"
+	"github.com/bmg-c/product-diary/logger"
 	"github.com/bmg-c/product-diary/schemas"
 	"github.com/bmg-c/product-diary/schemas/user_schemas"
+	"github.com/google/uuid"
 )
 
 type UserDB struct {
-	userStore *db.Store
-	codeStore *db.Store
+	userStore    *db.Store
+	codeStore    *db.Store
+	sessionStore *db.Store
 }
 
-func NewUserDB(userStore *db.Store, codeStore *db.Store) (*UserDB, error) {
-	if userStore == nil || codeStore == nil {
+func NewUserDB(userStore *db.Store, codeStore *db.Store, sessionStore *db.Store) (*UserDB, error) {
+	if userStore == nil || codeStore == nil || sessionStore == nil {
 		return nil, fmt.Errorf("Error creating UserDB instance, one of the stores is nil")
 	}
 	return &UserDB{
-		userStore: userStore,
-		codeStore: codeStore,
+		userStore:    userStore,
+		codeStore:    codeStore,
+		sessionStore: sessionStore,
 	}, nil
 }
 
@@ -110,7 +114,7 @@ func (udb *UserDB) AddUser(email string) error {
 }
 
 func (udb *UserDB) GetUser(userInfo user_schemas.GetUser) (user_schemas.UserDB, error) {
-	var up user_schemas.UserDB = user_schemas.UserDB{}
+	var userDB user_schemas.UserDB = user_schemas.UserDB{}
 
 	var query string = ""
 	var arg any
@@ -141,11 +145,11 @@ func (udb *UserDB) GetUser(userInfo user_schemas.GetUser) (user_schemas.UserDB, 
 	err = stmt.QueryRow(
 		arg,
 	).Scan(
-		&up.UserID,
-		&up.Username,
-		&up.Email,
-		&up.Password,
-		&up.CreatedAt,
+		&userDB.UserID,
+		&userDB.Username,
+		&userDB.Email,
+		&userDB.Password,
+		&userDB.CreatedAt,
 	)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -160,15 +164,16 @@ func (udb *UserDB) GetUser(userInfo user_schemas.GetUser) (user_schemas.UserDB, 
 		}
 	}
 
-	ve := schemas.ValidateStruct(up)
+	ve := schemas.ValidateStruct(userDB)
 	if ve != nil {
+		logger.Error.Printf("Invalid user in database %#v. Errors: %s", userDB, ve.Error())
 		return user_schemas.UserDB{}, errorhandler.StatusError{
 			Err:  L.GetError(L.MsgErrorInternalServer),
 			Code: http.StatusInternalServerError,
 		}
 	}
 
-	return up, nil
+	return userDB, nil
 }
 
 func (udb *UserDB) GetUsersAll() ([]user_schemas.UserDB, error) {
@@ -201,10 +206,102 @@ func (udb *UserDB) GetUsersAll() ([]user_schemas.UserDB, error) {
 			}
 		}
 
-		users = append(users, userDB)
+		ve := schemas.ValidateStruct(userDB)
+		if ve == nil {
+			users = append(users, userDB)
+		} else {
+			logger.Error.Printf("Invalid user in database %#v. Errors: %s", userDB, ve.Error())
+		}
 	}
 
 	return users, nil
+}
+
+func (udb *UserDB) GetSession(sessionInfo user_schemas.GetSession) (user_schemas.SessionDB, error) {
+	var sessionDB user_schemas.SessionDB = user_schemas.SessionDB{}
+
+	var query string = ""
+	var arg any
+	if !schemas.IsZero(sessionInfo.SessionUUID) {
+		query = `SELECT session_uuid, user_id FROM ` + udb.sessionStore.TableName + ` 
+		    WHERE session_uuid = ?`
+		arg = sessionInfo.SessionUUID
+	} else {
+		return user_schemas.SessionDB{}, errorhandler.StatusError{
+			Err:  L.GetError(L.MsgErrorGetUserNoInfo),
+			Code: http.StatusUnprocessableEntity,
+		}
+	}
+
+	stmt, err := udb.sessionStore.DB.Prepare(query)
+	if err != nil {
+		return user_schemas.SessionDB{}, errorhandler.StatusError{
+			Err:  L.GetError(L.MsgErrorInternalServer),
+			Code: http.StatusInternalServerError,
+		}
+	}
+	defer stmt.Close()
+
+	err = stmt.QueryRow(
+		arg,
+	).Scan(
+		&sessionDB.SessionUUID,
+		&sessionDB.UserID,
+	)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return user_schemas.SessionDB{}, errorhandler.StatusError{
+				Err:  L.GetError(L.MsgErrorGetSessionNotFound),
+				Code: http.StatusNotFound,
+			}
+		}
+		return user_schemas.SessionDB{}, errorhandler.StatusError{
+			Err:  L.GetError(L.MsgErrorInternalServer),
+			Code: http.StatusInternalServerError,
+		}
+	}
+
+	ve := schemas.ValidateStruct(sessionDB)
+	if ve != nil {
+		logger.Error.Printf("Invalid session in database %#v. Errors: %s", sessionDB, ve.Error())
+		return user_schemas.SessionDB{}, errorhandler.StatusError{
+			Err:  L.GetError(L.MsgErrorInternalServer),
+			Code: http.StatusInternalServerError,
+		}
+	}
+
+	return sessionDB, nil
+}
+
+func (udb *UserDB) AddSession(userID uint) (uuid.UUID, error) {
+	query := `INSERT INTO ` + udb.sessionStore.TableName + `(session_uuid, user_id)
+        VALUES (?, ?)`
+	sessionUUID := uuid.New()
+	sessionUUIDStr := sessionUUID.String()
+	if schemas.IsZero(sessionUUID) {
+		return uuid.UUID{}, errorhandler.StatusError{
+			Err:  L.GetError(L.MsgErrorInternalServer),
+			Code: http.StatusInternalServerError,
+		}
+	}
+
+	stmt, err := udb.sessionStore.DB.Prepare(query)
+	defer stmt.Close()
+	if err != nil {
+		return uuid.UUID{}, errorhandler.StatusError{
+			Err:  L.GetError(L.MsgErrorInternalServer),
+			Code: http.StatusInternalServerError,
+		}
+	}
+	_, err = stmt.Exec(sessionUUIDStr, userID)
+	if err != nil {
+		return uuid.UUID{}, errorhandler.StatusError{
+			Err:  L.GetError(L.MsgErrorInternalServer),
+			Code: http.StatusInternalServerError,
+		}
+	}
+
+	return sessionUUID, nil
 }
 
 func (udb *UserDB) deleteExpiredCodes() error {

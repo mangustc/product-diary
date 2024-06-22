@@ -7,6 +7,7 @@ import (
 	L "github.com/bmg-c/product-diary/localization"
 	"github.com/bmg-c/product-diary/schemas"
 	"github.com/bmg-c/product-diary/schemas/user_schemas"
+	"github.com/google/uuid"
 )
 
 func NewUserService(userDB UserDB) *UserService {
@@ -25,6 +26,8 @@ type UserDB interface {
 	AddUser(email string) error
 	GetUser(userInfo user_schemas.GetUser) (user_schemas.UserDB, error)
 	GetUsersAll() ([]user_schemas.UserDB, error)
+	GetSession(sessionInfo user_schemas.GetSession) (user_schemas.SessionDB, error)
+	AddSession(userID uint) (uuid.UUID, error)
 }
 
 func (us *UserService) SigninUser(ur user_schemas.UserSignin) error {
@@ -95,6 +98,45 @@ func (us *UserService) GetUsersAll() ([]user_schemas.UserPublic, error) {
 	}
 
 	return usersPublic, nil
+}
+
+func (us *UserService) LoginUser(ul user_schemas.UserLogin) (uuid.UUID, error) {
+	userInfo := user_schemas.GetUser{
+		Email: ul.Email,
+	}
+	userDB, err := us.userDB.GetUser(userInfo)
+	if err != nil {
+		return uuid.UUID{}, err
+	}
+	if ul.Password != userDB.Password {
+		return uuid.UUID{}, errorhandler.StatusError{
+			Err:  L.GetError(L.MsgErrorGetUserNotFound),
+			Code: http.StatusUnprocessableEntity,
+		}
+	}
+
+	sessionUUID, err := us.userDB.AddSession(userDB.UserID)
+	if err != nil {
+		return uuid.UUID{}, err
+	}
+	return sessionUUID, nil
+}
+
+func (us *UserService) GetUserBySession(sessionInfo user_schemas.GetSession) (user_schemas.UserDB, error) {
+	sessionDB, err := us.userDB.GetSession(sessionInfo)
+	if err != nil {
+		return user_schemas.UserDB{}, err
+	}
+
+	userInfo := user_schemas.GetUser{
+		UserID: sessionDB.UserID,
+	}
+	userDB, err := us.userDB.GetUser(userInfo)
+	if err != nil {
+		return user_schemas.UserDB{}, err
+	}
+
+	return userDB, nil
 }
 
 func (us *UserService) sendUserLogin(ul user_schemas.UserLogin) error {
