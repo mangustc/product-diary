@@ -1,11 +1,9 @@
 package services
 
 import (
-	"net/http"
+	"errors"
 
-	"github.com/bmg-c/product-diary/errorhandler"
-	L "github.com/bmg-c/product-diary/localization"
-	"github.com/bmg-c/product-diary/schemas"
+	E "github.com/bmg-c/product-diary/errorhandler"
 	"github.com/bmg-c/product-diary/schemas/user_schemas"
 	"github.com/google/uuid"
 )
@@ -26,17 +24,28 @@ type UserDB interface {
 	AddUser(email string) error
 	GetUser(userInfo user_schemas.GetUser) (user_schemas.UserDB, error)
 	GetUsersAll() ([]user_schemas.UserDB, error)
-	GetSession(sessionInfo user_schemas.GetSession) (user_schemas.SessionDB, error)
+	GetSession(sessionUUID uuid.UUID) (user_schemas.SessionDB, error)
 	AddSession(userID uint) (uuid.UUID, error)
 }
 
 func (us *UserService) SigninUser(ur user_schemas.UserSignin) error {
-	code, err := us.userDB.GetCode(ur.Email)
-	if err != nil {
+	userInfo := user_schemas.GetUser{
+		Email: ur.Email,
+	}
+	_, err := us.userDB.GetUser(userInfo)
+	if err == nil {
+		return E.ErrUnprocessableEntity
+	}
+	if !errors.Is(err, E.ErrNotFound) {
 		return err
 	}
 
-	if !schemas.IsZero(code) {
+	_, err = us.userDB.GetCode(ur.Email)
+	if err != nil {
+		if !errors.Is(err, E.ErrNotFound) {
+			return err
+		}
+	} else {
 		return nil
 	}
 
@@ -54,10 +63,7 @@ func (us *UserService) ConfirmSignin(ucr user_schemas.UserConfirmSignin) error {
 		return err
 	}
 	if code != ucr.Code {
-		return errorhandler.StatusError{
-			Err:  L.GetError(L.MsgErrorCodeWrong),
-			Code: http.StatusUnprocessableEntity,
-		}
+		return E.ErrUnprocessableEntity
 	}
 
 	err = us.userDB.AddUser(ucr.Email)
@@ -109,10 +115,7 @@ func (us *UserService) LoginUser(ul user_schemas.UserLogin) (uuid.UUID, error) {
 		return uuid.UUID{}, err
 	}
 	if ul.Password != userDB.Password {
-		return uuid.UUID{}, errorhandler.StatusError{
-			Err:  L.GetError(L.MsgErrorGetUserNotFound),
-			Code: http.StatusUnprocessableEntity,
-		}
+		return uuid.UUID{}, E.ErrUnprocessableEntity
 	}
 
 	sessionUUID, err := us.userDB.AddSession(userDB.UserID)
@@ -122,9 +125,12 @@ func (us *UserService) LoginUser(ul user_schemas.UserLogin) (uuid.UUID, error) {
 	return sessionUUID, nil
 }
 
-func (us *UserService) GetUserBySession(sessionInfo user_schemas.GetSession) (user_schemas.UserDB, error) {
-	sessionDB, err := us.userDB.GetSession(sessionInfo)
+func (us *UserService) GetUserBySession(sessionUUID uuid.UUID) (user_schemas.UserDB, error) {
+	sessionDB, err := us.userDB.GetSession(sessionUUID)
 	if err != nil {
+		if errors.Is(err, E.ErrNotFound) {
+			err = E.ErrUnprocessableEntity
+		}
 		return user_schemas.UserDB{}, err
 	}
 

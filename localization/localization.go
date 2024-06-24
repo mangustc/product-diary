@@ -35,6 +35,9 @@ const (
 	MsgLogOut                  Msg = 16
 	MsgErrorGetSessionNotFound Msg = 17
 	MsgErrorPasswordWrong      Msg = 18
+	MsgEnglish                 Msg = 19
+	MsgRussian                 Msg = 20
+	MsgEmailExists             Msg = 21
 )
 
 const (
@@ -131,7 +134,7 @@ var translations map[Msg]translateFunction = map[Msg]translateFunction{
 	MsgSignIn: func(locale Locale, args []string) string {
 		switch locale {
 		case LocaleRuRU:
-			return fmt.Sprintf("Зарегестрироваться")
+			return fmt.Sprintf("Зарегистрироваться")
 		default:
 			return fmt.Sprintf("Sign in")
 		}
@@ -208,6 +211,30 @@ var translations map[Msg]translateFunction = map[Msg]translateFunction{
 			return fmt.Sprintf("Wrong password")
 		}
 	},
+	MsgEnglish: func(locale Locale, args []string) string {
+		switch locale {
+		case LocaleRuRU:
+			return fmt.Sprintf("Английский")
+		default:
+			return fmt.Sprintf("English")
+		}
+	},
+	MsgRussian: func(locale Locale, args []string) string {
+		switch locale {
+		case LocaleRuRU:
+			return fmt.Sprintf("Русский")
+		default:
+			return fmt.Sprintf("Russian")
+		}
+	},
+	MsgEmailExists: func(locale Locale, args []string) string {
+		switch locale {
+		case LocaleRuRU:
+			return fmt.Sprintf("Такая почта уже сущствует")
+		default:
+			return fmt.Sprintf("This email already exists")
+		}
+	},
 }
 
 func Localize(msg string, locale Locale) string {
@@ -260,4 +287,13 @@ func (l *Localizer) GetLocalized(msgID Msg, args ...any) string {
 
 func (l *Localizer) Localize(msg string) string {
 	return Localize(msg, l.locale)
+}
+
+func LocaleFromString(localeStr string) Locale {
+	switch localeStr {
+	case "ru-RU":
+		return LocaleRuRU
+	default:
+		return LocaleEnUS
+	}
 }

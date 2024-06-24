@@ -1,6 +1,9 @@
 package views
 
-import "strconv"
+import (
+	"strconv"
+	L "github.com/bmg-c/product-diary/localization"
+)
 
 templ Layout(title string) {
 	<!DOCTYPE html>
@@ -10,9 +13,19 @@ templ Layout(title string) {
 		<meta charset="utf-8"/>
 		<script src="https://unpkg.com/htmx.org@1.9.12" integrity="sha384-ujb1lZYygJmzgSwoxRggbCHcjc0rB2XoQrxeTUQyRjrOnlCoYta87iKBWq3EsdM2" crossorigin="anonymous"></script>
 	</head>
-	<body id="main">
-		{ children... }
+	<body>
+		<select hx-get="/api/locale/index" hx-swap="outerHTML" hx-trigger="load"></select>
+		<div id="main">
+			{ children... }
+		</div>
 	</body>
+}
+
+templ LocaleSelect(l *L.Localizer, locale L.Locale) {
+	<select name="locale" hx-post="/api/locale/setlocale">
+		<option value="en-US" selected?={ locale == L.LocaleEnUS }>{ l.GetLocalized(L.MsgEnglish) }</option>
+		<option value="ru-RU" selected?={ locale == L.LocaleRuRU }>{ l.GetLocalized(L.MsgRussian) }</option>
+	</select>
 }
 
 templ ErrorIndex(code int, msg string) {

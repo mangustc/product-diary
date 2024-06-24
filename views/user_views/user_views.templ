@@ -4,52 +4,80 @@ import (
 	"github.com/bmg-c/product-diary/views"
 	"github.com/bmg-c/product-diary/schemas/user_schemas"
 	L "github.com/bmg-c/product-diary/localization"
+	"fmt"
 )
 
-templ LoginIndex(l *L.Localizer) {
+type LoginData struct {
+	Email        string
+	Password     string
+	SuccessLogin bool
+}
+
+templ LoginIndex(l *L.Localizer, data LoginData) {
 	<form id="user-login">
-		<input type="email" name="email" placeholder={ l.GetLocalized(L.MsgEmailPlaceholder) }/>
-		<input type="password" name="password" placeholder="*******"/>
+		<input type="email" name="email" placeholder={ l.GetLocalized(L.MsgEmailPlaceholder) } value={ data.Email }/>
+		<input type="password" name="password" placeholder="*******" value={ data.Password }/>
 		<button
 			type="button"
 			hx-post="/api/users/login/login"
-			hx-target="#main"
-			hx-swap="innerHTML"
+			hx-target="#user-login"
+			hx-swap="outerHTML"
 		>{ l.GetLocalized(L.MsgLogIn) }</button>
 	</form>
+	if data.SuccessLogin {
+		<div id="main" hx-swap-oob="innerHTML">
+			@UsersPage(l)
+		</div>
+	}
 }
 
 templ EndSignin(l *L.Localizer, email string) {
 	<span>{ l.GetLocalized(L.MsgLoginInfoSent, email) }</span>
 }
 
-templ ConfirmSignin(l *L.Localizer, email string) {
-	<form id="user-signin">
-		<input type="email" name="email" placeholder={ l.GetLocalized(L.MsgEmailPlaceholder) } value={ email } readonly/>
-		<input type="text" name="code" placeholder={ l.GetLocalized(L.MsgCodePlaceholder) }/>
-		<button
-			type="button"
-			hx-post="/api/users/signin/confirmsignin"
-			hx-target="#user-signin"
-			hx-swap="outerHTML"
-		>{ l.GetLocalized(L.MsgSignIn) }</button>
-	</form>
+type SigninData struct {
+	CodeSent bool
+	Email    string
+	Err      error
 }
 
-templ SigninIndex(l *L.Localizer) {
+templ SigninIndex(l *L.Localizer, data SigninData) {
 	<form id="user-signin">
-		<input type="email" name="email" placeholder={ l.GetLocalized(L.MsgEmailPlaceholder) }/>
+		<input
+			type="email"
+			name="email"
+			placeholder={ l.GetLocalized(L.MsgEmailPlaceholder) }
+			value={ data.Email }
+			readonly?={ data.CodeSent }
+		/>
+		if data.CodeSent {
+			<input type="text" name="code" placeholder={ l.GetLocalized(L.MsgCodePlaceholder) }/>
+		}
 		<button
 			type="button"
 			hx-post="/api/users/signin/signin"
 			hx-target="#user-signin"
 			hx-swap="outerHTML"
 		>{ l.GetLocalized(L.MsgSignIn) }</button>
+		if data.Err != nil {
+			@ErrorMsg(l, data.Err)
+		}
 	</form>
 }
 
-templ User(user user_schemas.UserPublic) {
-	<span>{ user.Email }</span>
+templ User(data user_schemas.UserPublic) {
+	<div style="display: flex; flex-direction: column">
+		<span>UserID: { fmt.Sprint(data.UserID) }</span>
+		<span>Email: { data.Email }</span>
+		<span>Username: { data.Username }</span>
+		<span>Created at: { data.CreatedAt.String() }</span>
+	</div>
+}
+
+templ ErrorMsg(l *L.Localizer, err error) {
+	if err != nil {
+		<div id="user-output-error" hx-swap-oob="innerHTML"><span style="color: red">{ l.Localize(err.Error()) }</span></div>
+	}
 }
 
 templ UserIndex(l *L.Localizer) {
@@ -113,8 +141,21 @@ templ UserControls(l *L.Localizer, authorized bool) {
 
 templ UsersPage(l *L.Localizer) {
 	@views.Layout("Users") {
+		<script>
+            document.addEventListener("DOMContentLoaded", (event) => {
+                document.body.addEventListener('htmx:beforeSwap', function(evt) {
+                    if (evt.detail.xhr.status == 422 || evt.detail.xhr.status == 404) {
+                        evt.detail.shouldSwap = true;
+                        evt.detail.isError = false;
+                    } else if (evt.detail.xhr.status == 200) {
+                        document.getElementById("user-output-error").innerHTML = ""
+                    }
+                });
+            });
+        </script>
 		<h3>{ l.GetLocalized(L.MsgUserControl) }: <span id="user-title-section">{ l.GetLocalized(L.MsgUserList) }</span></h3>
 		<div id="user-control-buttons" hx-get="/api/users/controls/index" hx-trigger="load"></div>
 		<div id="user-output" hx-get="/api/users/userlist/index" hx-trigger="load"></div>
+		<div id="user-output-error"></div>
 	}
 }

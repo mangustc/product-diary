@@ -3,11 +3,9 @@ package user_db
 import (
 	"database/sql"
 	"fmt"
-	"net/http"
 
 	"github.com/bmg-c/product-diary/db"
-	"github.com/bmg-c/product-diary/errorhandler"
-	L "github.com/bmg-c/product-diary/localization"
+	E "github.com/bmg-c/product-diary/errorhandler"
 	"github.com/bmg-c/product-diary/logger"
 	"github.com/bmg-c/product-diary/schemas"
 	"github.com/bmg-c/product-diary/schemas/user_schemas"
@@ -34,10 +32,7 @@ func NewUserDB(userStore *db.Store, codeStore *db.Store, sessionStore *db.Store)
 func (udb *UserDB) AddCode(email string) error {
 	err := udb.deleteExpiredCodes()
 	if err != nil {
-		return errorhandler.StatusError{
-			Err:  L.GetError(L.MsgErrorInternalServer),
-			Code: http.StatusInternalServerError,
-		}
+		return E.ErrInternalServer
 	}
 
 	query := `INSERT INTO ` + udb.codeStore.TableName + `(code_id, email, code, created_at)
@@ -46,17 +41,11 @@ func (udb *UserDB) AddCode(email string) error {
 	stmt, err := udb.codeStore.DB.Prepare(query)
 	defer stmt.Close()
 	if err != nil {
-		return errorhandler.StatusError{
-			Err:  L.GetError(L.MsgErrorInternalServer),
-			Code: http.StatusInternalServerError,
-		}
+		return E.ErrInternalServer
 	}
 	_, err = stmt.Exec(email, "000000")
 	if err != nil {
-		return errorhandler.StatusError{
-			Err:  L.GetError(L.MsgErrorInternalServer),
-			Code: http.StatusInternalServerError,
-		}
+		return E.ErrInternalServer
 	}
 
 	return nil
@@ -65,10 +54,7 @@ func (udb *UserDB) AddCode(email string) error {
 func (udb *UserDB) GetCode(email string) (string, error) {
 	err := udb.deleteExpiredCodes()
 	if err != nil {
-		return "", errorhandler.StatusError{
-			Err:  L.GetError(L.MsgErrorInternalServer),
-			Code: http.StatusInternalServerError,
-		}
+		return "", E.ErrInternalServer
 	}
 
 	var code string = ""
@@ -77,12 +63,9 @@ func (udb *UserDB) GetCode(email string) (string, error) {
 	err = udb.codeStore.DB.QueryRow(query, email).Scan(&code)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return "", nil
+			return "", E.ErrNotFound
 		}
-		return "", errorhandler.StatusError{
-			Err:  L.GetError(L.MsgErrorInternalServer),
-			Code: http.StatusInternalServerError,
-		}
+		return "", E.ErrInternalServer
 	}
 	return code, nil
 }
@@ -97,17 +80,11 @@ func (udb *UserDB) AddUser(email string) error {
 	stmt, err := udb.userStore.DB.Prepare(query)
 	defer stmt.Close()
 	if err != nil {
-		return errorhandler.StatusError{
-			Err:  L.GetError(L.MsgErrorInternalServer),
-			Code: http.StatusInternalServerError,
-		}
+		return E.ErrInternalServer
 	}
 	_, err = stmt.Exec(username, email, password)
 	if err != nil {
-		return errorhandler.StatusError{
-			Err:  L.GetError(L.MsgErrorInternalServer),
-			Code: http.StatusInternalServerError,
-		}
+		return E.ErrInternalServer
 	}
 
 	return nil
@@ -127,18 +104,12 @@ func (udb *UserDB) GetUser(userInfo user_schemas.GetUser) (user_schemas.UserDB, 
 		    WHERE email = ?`
 		arg = userInfo.Email
 	} else {
-		return user_schemas.UserDB{}, errorhandler.StatusError{
-			Err:  L.GetError(L.MsgErrorGetUserNoInfo),
-			Code: http.StatusUnprocessableEntity,
-		}
+		return user_schemas.UserDB{}, E.ErrUnprocessableEntity
 	}
 
 	stmt, err := udb.userStore.DB.Prepare(query)
 	if err != nil {
-		return user_schemas.UserDB{}, errorhandler.StatusError{
-			Err:  L.GetError(L.MsgErrorInternalServer),
-			Code: http.StatusInternalServerError,
-		}
+		return user_schemas.UserDB{}, E.ErrInternalServer
 	}
 	defer stmt.Close()
 
@@ -153,24 +124,15 @@ func (udb *UserDB) GetUser(userInfo user_schemas.GetUser) (user_schemas.UserDB, 
 	)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return user_schemas.UserDB{}, errorhandler.StatusError{
-				Err:  L.GetError(L.MsgErrorGetUserNotFound),
-				Code: http.StatusNotFound,
-			}
+			return user_schemas.UserDB{}, E.ErrNotFound
 		}
-		return user_schemas.UserDB{}, errorhandler.StatusError{
-			Err:  L.GetError(L.MsgErrorInternalServer),
-			Code: http.StatusInternalServerError,
-		}
+		return user_schemas.UserDB{}, E.ErrInternalServer
 	}
 
 	ve := schemas.ValidateStruct(userDB)
 	if ve != nil {
 		logger.Error.Printf("Invalid user in database %#v. Errors: %s", userDB, ve.Error())
-		return user_schemas.UserDB{}, errorhandler.StatusError{
-			Err:  L.GetError(L.MsgErrorInternalServer),
-			Code: http.StatusInternalServerError,
-		}
+		return user_schemas.UserDB{}, E.ErrInternalServer
 	}
 
 	return userDB, nil
@@ -183,10 +145,7 @@ func (udb *UserDB) GetUsersAll() ([]user_schemas.UserDB, error) {
 
 	rows, err := udb.userStore.DB.Query(query)
 	if err != nil {
-		return []user_schemas.UserDB{}, errorhandler.StatusError{
-			Err:  L.GetError(L.MsgErrorInternalServer),
-			Code: http.StatusInternalServerError,
-		}
+		return []user_schemas.UserDB{}, E.ErrInternalServer
 	}
 	defer rows.Close()
 
@@ -200,10 +159,7 @@ func (udb *UserDB) GetUsersAll() ([]user_schemas.UserDB, error) {
 			&userDB.CreatedAt,
 		)
 		if err != nil {
-			return []user_schemas.UserDB{}, errorhandler.StatusError{
-				Err:  L.GetError(L.MsgErrorInternalServer),
-				Code: http.StatusInternalServerError,
-			}
+			return []user_schemas.UserDB{}, E.ErrInternalServer
 		}
 
 		ve := schemas.ValidateStruct(userDB)
@@ -217,28 +173,22 @@ func (udb *UserDB) GetUsersAll() ([]user_schemas.UserDB, error) {
 	return users, nil
 }
 
-func (udb *UserDB) GetSession(sessionInfo user_schemas.GetSession) (user_schemas.SessionDB, error) {
+func (udb *UserDB) GetSession(sessionUUID uuid.UUID) (user_schemas.SessionDB, error) {
 	var sessionDB user_schemas.SessionDB = user_schemas.SessionDB{}
 
 	var query string = ""
 	var arg any
-	if !schemas.IsZero(sessionInfo.SessionUUID) {
+	if !schemas.IsZero(sessionUUID) {
 		query = `SELECT session_uuid, user_id FROM ` + udb.sessionStore.TableName + ` 
 		    WHERE session_uuid = ?`
-		arg = sessionInfo.SessionUUID
+		arg = sessionUUID
 	} else {
-		return user_schemas.SessionDB{}, errorhandler.StatusError{
-			Err:  L.GetError(L.MsgErrorGetUserNoInfo),
-			Code: http.StatusUnprocessableEntity,
-		}
+		return user_schemas.SessionDB{}, E.ErrUnprocessableEntity
 	}
 
 	stmt, err := udb.sessionStore.DB.Prepare(query)
 	if err != nil {
-		return user_schemas.SessionDB{}, errorhandler.StatusError{
-			Err:  L.GetError(L.MsgErrorInternalServer),
-			Code: http.StatusInternalServerError,
-		}
+		return user_schemas.SessionDB{}, E.ErrInternalServer
 	}
 	defer stmt.Close()
 
@@ -250,24 +200,15 @@ func (udb *UserDB) GetSession(sessionInfo user_schemas.GetSession) (user_schemas
 	)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return user_schemas.SessionDB{}, errorhandler.StatusError{
-				Err:  L.GetError(L.MsgErrorGetSessionNotFound),
-				Code: http.StatusNotFound,
-			}
+			return user_schemas.SessionDB{}, E.ErrNotFound
 		}
-		return user_schemas.SessionDB{}, errorhandler.StatusError{
-			Err:  L.GetError(L.MsgErrorInternalServer),
-			Code: http.StatusInternalServerError,
-		}
+		return user_schemas.SessionDB{}, E.ErrInternalServer
 	}
 
 	ve := schemas.ValidateStruct(sessionDB)
 	if ve != nil {
 		logger.Error.Printf("Invalid session in database %#v. Errors: %s", sessionDB, ve.Error())
-		return user_schemas.SessionDB{}, errorhandler.StatusError{
-			Err:  L.GetError(L.MsgErrorInternalServer),
-			Code: http.StatusInternalServerError,
-		}
+		return user_schemas.SessionDB{}, E.ErrInternalServer
 	}
 
 	return sessionDB, nil
@@ -279,26 +220,17 @@ func (udb *UserDB) AddSession(userID uint) (uuid.UUID, error) {
 	sessionUUID := uuid.New()
 	sessionUUIDStr := sessionUUID.String()
 	if schemas.IsZero(sessionUUID) {
-		return uuid.UUID{}, errorhandler.StatusError{
-			Err:  L.GetError(L.MsgErrorInternalServer),
-			Code: http.StatusInternalServerError,
-		}
+		return uuid.UUID{}, E.ErrInternalServer
 	}
 
 	stmt, err := udb.sessionStore.DB.Prepare(query)
 	defer stmt.Close()
 	if err != nil {
-		return uuid.UUID{}, errorhandler.StatusError{
-			Err:  L.GetError(L.MsgErrorInternalServer),
-			Code: http.StatusInternalServerError,
-		}
+		return uuid.UUID{}, E.ErrInternalServer
 	}
 	_, err = stmt.Exec(sessionUUIDStr, userID)
 	if err != nil {
-		return uuid.UUID{}, errorhandler.StatusError{
-			Err:  L.GetError(L.MsgErrorInternalServer),
-			Code: http.StatusInternalServerError,
-		}
+		return uuid.UUID{}, E.ErrInternalServer
 	}
 
 	return sessionUUID, nil
@@ -311,17 +243,11 @@ func (udb *UserDB) deleteExpiredCodes() error {
 	stmt, err := udb.codeStore.DB.Prepare(query)
 	defer stmt.Close()
 	if err != nil {
-		return errorhandler.StatusError{
-			Err:  L.GetError(L.MsgErrorInternalServer),
-			Code: http.StatusInternalServerError,
-		}
+		return E.ErrInternalServer
 	}
 	_, err = stmt.Exec()
 	if err != nil {
-		return errorhandler.StatusError{
-			Err:  L.GetError(L.MsgErrorInternalServer),
-			Code: http.StatusInternalServerError,
-		}
+		return E.ErrInternalServer
 	}
 
 	return nil

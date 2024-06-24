@@ -74,11 +74,14 @@ func main() {
 	router.HandleFunc("POST /api/users/user/getuser", uh.HandleGetUser)
 	router.HandleFunc("GET /api/users/signin/index", uh.HandleSigninIndex)
 	router.HandleFunc("POST /api/users/signin/signin", uh.HandleSigninSignin)
-	router.HandleFunc("POST /api/users/signin/confirmsignin", uh.HandleConfirmSignin)
 	router.HandleFunc("GET /api/users/login/index", uh.HandleLoginIndex)
 	router.HandleFunc("POST /api/users/login/login", uh.HandleLoginLogin)
 	router.HandleFunc("GET /api/users/profile/index", uh.HandleProfileIndex)
 	router.HandleFunc("POST /api/users/logout/logout", uh.HandleLogout)
+
+	mh := handlers.NewMainHandler()
+	router.HandleFunc("GET /api/locale/index", mh.HandleLocale)
+	router.HandleFunc("POST /api/locale/setlocale", mh.HandleSetLocale)
 
 	port := ":1323"
 	middlewareStack := middleware.CreateStack(
