@@ -61,7 +61,22 @@ func main() {
 	} else {
 		logger.Info.Println("Successfully connected session store")
 	}
-	udb, err := user_db.NewUserDB(userStore, codeStore, sessionStore)
+	personStore, err := db.NewStore("database.db", "persons",
+		`CREATE TABLE IF NOT EXISTS persons (
+        person_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        person_name VARCHAR(64) NOT NULL,
+        is_hidden INTEGER NOT NULL DEFAULT FALSE,
+        FOREIGN KEY (user_id) REFERENCES `+userStore.TableName+` (user_id) ON DELETE RESTRICT,
+        UNIQUE(user_id, person_name)
+    );`)
+	if err != nil {
+		logger.Error.Println("Error creating person store: " + err.Error())
+		panic(err.Error())
+	} else {
+		logger.Info.Println("Successfully connected person store")
+	}
+	udb, err := user_db.NewUserDB(userStore, codeStore, sessionStore, personStore)
 	if err != nil {
 		logger.Error.Println("Error creating user database layer: " + err.Error())
 	}
@@ -78,6 +93,8 @@ func main() {
 	router.HandleFunc("POST /api/users/login/login", uh.HandleLoginLogin)
 	router.HandleFunc("GET /api/users/profile/index", uh.HandleProfileIndex)
 	router.HandleFunc("POST /api/users/logout/logout", uh.HandleLogout)
+	router.HandleFunc("POST /api/users/person/togglehidden", uh.HandleTogglePerson)
+	router.HandleFunc("POST /api/users/person/addperson", uh.HandleAddPerson)
 
 	mh := handlers.NewMainHandler()
 	router.HandleFunc("GET /api/locale/index", mh.HandleLocale)

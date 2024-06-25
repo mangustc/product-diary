@@ -52,3 +52,15 @@ type SessionDB struct {
 type GetSession struct {
 	SessionUUID uuid.UUID `json:"session_uuid"`
 }
+
+type PersonDB struct {
+	PersonID   uint   `json:"person_id" format:"id"`
+	UserID     uint   `json:"user_id" format:"id"`
+	PersonName string `json:"person_name" format:"username"`
+	IsHidden   bool   `json:"is_hidden"`
+}
+
+type GetPerson struct {
+	UserID     uint   `json:"user_id" format:"id"`
+	PersonName string `json:"person_name" format:"username"`
+}

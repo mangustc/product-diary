@@ -11,6 +11,7 @@ import (
 	E "github.com/bmg-c/product-diary/errorhandler"
 	"github.com/bmg-c/product-diary/localization"
 	"github.com/google/uuid"
+	"github.com/mattn/go-sqlite3"
 )
 
 func ComponentBytes(component templ.Component, r *http.Request) ([]byte, error) {
@@ -150,4 +151,14 @@ func DeleteLocaleCookie(w http.ResponseWriter) {
 	}
 
 	http.SetCookie(w, &cookie)
+}
+
+func IsErrorSQL(err error, sqlErr error) bool {
+	var sqliteErr sqlite3.Error
+	if errors.As(err, &sqliteErr) {
+		if sqliteErr.Code == sqlErr {
+			return true
+		}
+	}
+	return false
 }

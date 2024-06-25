@@ -16,28 +16,35 @@ type (
 )
 
 const (
-	MsgErrorTest               Msg = 0
-	MsgErrorInternalServer     Msg = 1
-	MsgErrorGetUserNoInfo      Msg = 2
-	MsgErrorGetUserNotFound    Msg = 3
-	MsgErrorCodeWrong          Msg = 4
-	MsgErrorEmailWrong         Msg = 5
-	MsgLoginInfoSent           Msg = 6
-	MsgEmailPlaceholder        Msg = 7
-	MsgCodePlaceholder         Msg = 8
-	MsgSignIn                  Msg = 9
-	MsgLogIn                   Msg = 10
-	MsgFindUser                Msg = 11
-	MsgUserControl             Msg = 12
-	MsgUserList                Msg = 13
-	MsgUserByID                Msg = 14
-	MsgProfileInfo             Msg = 15
-	MsgLogOut                  Msg = 16
-	MsgErrorGetSessionNotFound Msg = 17
-	MsgErrorPasswordWrong      Msg = 18
-	MsgEnglish                 Msg = 19
-	MsgRussian                 Msg = 20
-	MsgEmailExists             Msg = 21
+	MsgErrorTest Msg = iota
+	MsgErrorInternalServer
+	MsgErrorGetUserNoInfo
+	MsgErrorGetUserNotFound
+	MsgErrorCodeWrong
+	MsgErrorEmailWrong
+	MsgLoginInfoSent
+	MsgEmailPlaceholder
+	MsgCodePlaceholder
+	MsgSignIn
+	MsgLogIn
+	MsgFindUser
+	MsgUserControl
+	MsgUserList
+	MsgUserByID
+	MsgProfileInfo
+	MsgLogOut
+	MsgErrorGetSessionNotFound
+	MsgErrorPasswordWrong
+	MsgEnglish
+	MsgRussian
+	MsgEmailExists
+	MsgUnhide
+	MsgHide
+	MsgPersons
+	MsgUsername
+	MsgAdd
+	MsgErrorUsernameEmpty
+	MsgErrorUsernameAlreadyExists
 )
 
 const (
@@ -233,6 +240,62 @@ var translations map[Msg]translateFunction = map[Msg]translateFunction{
 			return fmt.Sprintf("Такая почта уже сущствует")
 		default:
 			return fmt.Sprintf("This email already exists")
+		}
+	},
+	MsgUnhide: func(locale Locale, args []string) string {
+		switch locale {
+		case LocaleRuRU:
+			return fmt.Sprintf("Показать")
+		default:
+			return fmt.Sprintf("Unhide")
+		}
+	},
+	MsgHide: func(locale Locale, args []string) string {
+		switch locale {
+		case LocaleRuRU:
+			return fmt.Sprintf("Скрыть")
+		default:
+			return fmt.Sprintf("Hide")
+		}
+	},
+	MsgPersons: func(locale Locale, args []string) string {
+		switch locale {
+		case LocaleRuRU:
+			return fmt.Sprintf("Люди")
+		default:
+			return fmt.Sprintf("Persons")
+		}
+	},
+	MsgUsername: func(locale Locale, args []string) string {
+		switch locale {
+		case LocaleRuRU:
+			return fmt.Sprintf("Никнейм")
+		default:
+			return fmt.Sprintf("Username")
+		}
+	},
+	MsgAdd: func(locale Locale, args []string) string {
+		switch locale {
+		case LocaleRuRU:
+			return fmt.Sprintf("Добавить")
+		default:
+			return fmt.Sprintf("Add")
+		}
+	},
+	MsgErrorUsernameEmpty: func(locale Locale, args []string) string {
+		switch locale {
+		case LocaleRuRU:
+			return fmt.Sprintf("Введите имя")
+		default:
+			return fmt.Sprintf("Enter a name")
+		}
+	},
+	MsgErrorUsernameAlreadyExists: func(locale Locale, args []string) string {
+		switch locale {
+		case LocaleRuRU:
+			return fmt.Sprintf("Данное имя уже занято")
+		default:
+			return fmt.Sprintf("This name is already taken")
 		}
 	},
 }

@@ -9,23 +9,27 @@ import (
 	"github.com/bmg-c/product-diary/logger"
 	"github.com/bmg-c/product-diary/schemas"
 	"github.com/bmg-c/product-diary/schemas/user_schemas"
+	"github.com/bmg-c/product-diary/util"
 	"github.com/google/uuid"
+	"github.com/mattn/go-sqlite3"
 )
 
 type UserDB struct {
 	userStore    *db.Store
 	codeStore    *db.Store
 	sessionStore *db.Store
+	personStore  *db.Store
 }
 
-func NewUserDB(userStore *db.Store, codeStore *db.Store, sessionStore *db.Store) (*UserDB, error) {
-	if userStore == nil || codeStore == nil || sessionStore == nil {
+func NewUserDB(userStore *db.Store, codeStore *db.Store, sessionStore *db.Store, personStore *db.Store) (*UserDB, error) {
+	if userStore == nil || codeStore == nil || sessionStore == nil || personStore == nil {
 		return nil, fmt.Errorf("Error creating UserDB instance, one of the stores is nil")
 	}
 	return &UserDB{
 		userStore:    userStore,
 		codeStore:    codeStore,
 		sessionStore: sessionStore,
+		personStore:  personStore,
 	}, nil
 }
 
@@ -84,6 +88,9 @@ func (udb *UserDB) AddUser(email string) error {
 	}
 	_, err = stmt.Exec(username, email, password)
 	if err != nil {
+		if util.IsErrorSQL(err, sqlite3.ErrConstraint) {
+			return E.ErrUnprocessableEntity
+		}
 		return E.ErrInternalServer
 	}
 
@@ -234,6 +241,92 @@ func (udb *UserDB) AddSession(userID uint) (uuid.UUID, error) {
 	}
 
 	return sessionUUID, nil
+}
+
+func (udb *UserDB) AddPerson(personInfo user_schemas.GetPerson) (user_schemas.PersonDB, error) {
+	query := `INSERT INTO ` + udb.personStore.TableName + `(person_id, user_id, person_name, is_hidden)
+        VALUES (NULL, ?, ?, FALSE)`
+
+	stmt, err := udb.personStore.DB.Prepare(query)
+	defer stmt.Close()
+	if err != nil {
+		return user_schemas.PersonDB{}, E.ErrInternalServer
+	}
+	res, err := stmt.Exec(personInfo.UserID, personInfo.PersonName)
+	if err != nil {
+		if util.IsErrorSQL(err, sqlite3.ErrConstraint) {
+			return user_schemas.PersonDB{}, E.ErrUnprocessableEntity
+		}
+		return user_schemas.PersonDB{}, E.ErrInternalServer
+	}
+	createdID, err := res.LastInsertId()
+	if err != nil {
+		return user_schemas.PersonDB{}, E.ErrInternalServer
+	}
+	personDB := user_schemas.PersonDB{
+		PersonID:   uint(createdID),
+		UserID:     personInfo.UserID,
+		PersonName: personInfo.PersonName,
+		IsHidden:   false,
+	}
+
+	return personDB, nil
+}
+
+func (udb *UserDB) GetUserPersons(userInfo user_schemas.GetUser) ([]user_schemas.PersonDB, error) {
+	var personDB user_schemas.PersonDB = user_schemas.PersonDB{}
+	query := `SELECT person_id, user_id, person_name, is_hidden FROM ` + udb.personStore.TableName
+
+	rows, err := udb.userStore.DB.Query(query)
+	if err != nil {
+		return []user_schemas.PersonDB{}, E.ErrInternalServer
+	}
+	defer rows.Close()
+
+	persons := []user_schemas.PersonDB{}
+	for rows.Next() {
+		err = rows.Scan(
+			&personDB.PersonID,
+			&personDB.UserID,
+			&personDB.PersonName,
+			&personDB.IsHidden,
+		)
+		if err != nil {
+			return []user_schemas.PersonDB{}, E.ErrInternalServer
+		}
+		persons = append(persons, personDB)
+	}
+
+	return persons, nil
+}
+
+func (udb *UserDB) ToggleHiddenPerson(personInfo user_schemas.GetPerson) (user_schemas.PersonDB, error) {
+	query := `UPDATE ` + udb.personStore.TableName + ` 
+        SET is_hidden = 1 - is_hidden` + `
+        WHERE user_id = ? AND person_name = ?
+        RETURNING *`
+
+	stmt, err := udb.personStore.DB.Prepare(query)
+	defer stmt.Close()
+	if err != nil {
+		return user_schemas.PersonDB{}, E.ErrInternalServer
+	}
+
+	personDB := user_schemas.PersonDB{}
+	err = stmt.QueryRow(personInfo.UserID, personInfo.PersonName).Scan(
+		&personDB.PersonID,
+		&personDB.UserID,
+		&personDB.PersonName,
+		&personDB.IsHidden,
+	)
+	if err != nil {
+		if util.IsErrorSQL(err, sqlite3.ErrNotFound) {
+			return user_schemas.PersonDB{}, E.ErrUnprocessableEntity
+		}
+		return user_schemas.PersonDB{}, E.ErrInternalServer
+	}
+
+	return personDB, nil
 }
 
 func (udb *UserDB) deleteExpiredCodes() error {

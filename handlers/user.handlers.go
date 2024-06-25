@@ -22,6 +22,9 @@ type UserService interface {
 	ConfirmSignin(ucr user_schemas.UserConfirmSignin) error
 	LoginUser(ul user_schemas.UserLogin) (uuid.UUID, error)
 	GetUserBySession(sessionUUID uuid.UUID) (user_schemas.UserDB, error)
+	AddPerson(personInfo user_schemas.GetPerson) (user_schemas.PersonDB, error)
+	GetUserPersons(userInfo user_schemas.GetUser) ([]user_schemas.PersonDB, error)
+	ToggleHiddenPerson(personInfo user_schemas.GetPerson) (user_schemas.PersonDB, error)
 }
 
 func NewUserHandler(us UserService) *UserHandler {
@@ -298,7 +301,7 @@ func (uh *UserHandler) HandleLoginLogin(w http.ResponseWriter, r *http.Request) 
 }
 
 func (uh *UserHandler) HandleProfileIndex(w http.ResponseWriter, r *http.Request) {
-	_ = util.InitHTMLHandler(w, r)
+	l := util.InitHTMLHandler(w, r)
 	var code int = http.StatusOK
 	var out []byte
 	defer util.RespondHTTP(w, &code, &out)
@@ -322,7 +325,110 @@ func (uh *UserHandler) HandleProfileIndex(w http.ResponseWriter, r *http.Request
 		CreatedAt: userDB.CreatedAt,
 	}
 
-	util.RenderComponent(&out, user_views.User(up), r)
+	userInfo := user_schemas.GetUser{
+		UserID: userDB.UserID,
+	}
+
+	persons, err := uh.UserService.GetUserPersons(userInfo)
+	if err != nil {
+		logger.Error.Printf("Erorr: %v\n", err)
+	}
+
+	util.RenderComponent(&out, user_views.ProfileBlock(l, up, persons), r)
+}
+
+func (uh *UserHandler) HandleTogglePerson(w http.ResponseWriter, r *http.Request) {
+	l := util.InitHTMLHandler(w, r)
+	var code int = http.StatusOK
+	var out []byte
+	defer util.RespondHTTP(w, &code, &out)
+
+	var userDB user_schemas.UserDB
+	sessionUUID, err := util.GetUserSessionCookieValue(w, r)
+	if err != nil {
+		if errors.Is(err, E.ErrInternalServer) {
+			logger.Error.Printf("Failure getting session cookie.\n")
+		}
+	} else {
+		userDB, err = uh.UserService.GetUserBySession(sessionUUID)
+		if err != nil {
+			logger.Error.Printf("Failure getting user from valid session cookie.\n")
+		}
+	}
+
+	var input user_schemas.GetPerson = user_schemas.GetPerson{}
+	err = r.ParseForm()
+	input.UserID = userDB.UserID
+	input.PersonName = r.Form.Get("person_name")
+	ve := schemas.ValidateStruct(input)
+	if ve != nil || schemas.IsZero(input) || err != nil {
+		code = http.StatusUnprocessableEntity
+		util.RenderComponent(&out, user_views.ErrorMsg(l, L.GetError(L.MsgErrorUsernameEmpty)), r)
+		return
+	}
+
+	personDB, err := uh.UserService.ToggleHiddenPerson(input)
+	if err != nil {
+		switch err {
+		case E.ErrUnprocessableEntity:
+			code = http.StatusUnprocessableEntity
+			util.RenderComponent(&out, user_views.ErrorMsg(l, L.GetError(L.MsgErrorGetUserNotFound)), r)
+			return
+		default:
+			code = http.StatusInternalServerError
+			logger.Error.Println("Failure getting users from the database.")
+			return
+		}
+	}
+
+	util.RenderComponent(&out, user_views.Person(l, personDB), r)
+}
+
+func (uh *UserHandler) HandleAddPerson(w http.ResponseWriter, r *http.Request) {
+	l := util.InitHTMLHandler(w, r)
+	var code int = http.StatusOK
+	var out []byte
+	defer util.RespondHTTP(w, &code, &out)
+
+	var userDB user_schemas.UserDB
+	sessionUUID, err := util.GetUserSessionCookieValue(w, r)
+	if err != nil {
+		if errors.Is(err, E.ErrInternalServer) {
+			logger.Error.Printf("Failure getting session cookie.\n")
+		}
+	} else {
+		userDB, err = uh.UserService.GetUserBySession(sessionUUID)
+		if err != nil {
+			logger.Error.Printf("Failure getting user from valid session cookie.\n")
+		}
+	}
+
+	var input user_schemas.GetPerson = user_schemas.GetPerson{}
+	err = r.ParseForm()
+	input.UserID = userDB.UserID
+	input.PersonName = r.Form.Get("person_name")
+	ve := schemas.ValidateStruct(input)
+	if ve != nil || schemas.IsZero(input) || err != nil {
+		code = http.StatusUnprocessableEntity
+		util.RenderComponent(&out, user_views.ErrorMsg(l, L.GetError(L.MsgErrorUsernameEmpty)), r)
+		return
+	}
+
+	personDB, err := uh.UserService.AddPerson(input)
+	if err != nil {
+		switch err {
+		case E.ErrUnprocessableEntity:
+			code = http.StatusUnprocessableEntity
+			util.RenderComponent(&out, user_views.ErrorMsg(l, L.GetError(L.MsgErrorUsernameAlreadyExists)), r)
+			return
+		default:
+			code = http.StatusInternalServerError
+			logger.Error.Println("Failure getting users from the database.")
+			return
+		}
+	}
+
+	util.RenderComponent(&out, user_views.Person(l, personDB), r)
 }
 
 func (uh *UserHandler) HandleLogout(w http.ResponseWriter, r *http.Request) {

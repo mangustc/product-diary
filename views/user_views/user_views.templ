@@ -7,6 +7,76 @@ import (
 	"fmt"
 )
 
+templ ProfileBlock(l *L.Localizer, user user_schemas.UserPublic, persons []user_schemas.PersonDB) {
+	<div style="display: flex; flex-direction: column; gap: 8px;">
+		<h3>{ l.GetLocalized(L.MsgProfileInfo) }</h3>
+		@User(user)
+		@PersonBlock(l, persons)
+	</div>
+}
+
+templ Person(l *L.Localizer, person user_schemas.PersonDB) {
+	<div style="display: flex; flex-direction: row; gap: 12px;" hx-target="this">
+		<form>
+			if person.IsHidden {
+				<input
+					name="person_name"
+					type="text"
+					value={ person.PersonName }
+					style="color: gray;"
+					readonly
+				/>
+			} else {
+				<input
+					name="person_name"
+					type="text"
+					value={ person.PersonName }
+					readonly
+				/>
+			}
+			<button
+				type="button"
+				hx-post="/api/users/person/togglehidden"
+				hx-swap="outerHTML"
+			>
+				if person.IsHidden {
+					{ l.GetLocalized(L.MsgUnhide) }
+				} else {
+					{ l.GetLocalized(L.MsgHide) }
+				}
+			</button>
+		</form>
+	</div>
+}
+
+templ PersonList(l *L.Localizer, persons []user_schemas.PersonDB) {
+	<div id="user-person-list" style="display: flex; flex-direction: column; gap: 4px;">
+		for _, person := range persons {
+			@Person(l, person)
+		}
+	</div>
+}
+
+templ PersonBlock(l *L.Localizer, persons []user_schemas.PersonDB) {
+	<div style="display: flex; flex-direction: column; gap: 8px;">
+		<h3>{ l.GetLocalized(L.MsgPersons) }</h3>
+		<form id="form-add-user" style="padding-bottom: 8px">
+			<input
+				name="person_name"
+				type="text"
+				placeholder={ l.GetLocalized(L.MsgUsername) }
+			/>
+			<button
+				type="button"
+				hx-post="/api/users/person/addperson"
+				hx-target="#user-person-list"
+				hx-swap="beforeend"
+			>{ l.GetLocalized(L.MsgAdd) }</button>
+		</form>
+		@PersonList(l, persons)
+	</div>
+}
+
 type LoginData struct {
 	Email        string
 	Password     string

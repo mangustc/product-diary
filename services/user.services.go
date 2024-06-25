@@ -26,6 +26,9 @@ type UserDB interface {
 	GetUsersAll() ([]user_schemas.UserDB, error)
 	GetSession(sessionUUID uuid.UUID) (user_schemas.SessionDB, error)
 	AddSession(userID uint) (uuid.UUID, error)
+	AddPerson(personInfo user_schemas.GetPerson) (user_schemas.PersonDB, error)
+	GetUserPersons(userInfo user_schemas.GetUser) ([]user_schemas.PersonDB, error)
+	ToggleHiddenPerson(personInfo user_schemas.GetPerson) (user_schemas.PersonDB, error)
 }
 
 func (us *UserService) SigninUser(ur user_schemas.UserSignin) error {
@@ -143,6 +146,33 @@ func (us *UserService) GetUserBySession(sessionUUID uuid.UUID) (user_schemas.Use
 	}
 
 	return userDB, nil
+}
+
+func (us *UserService) AddPerson(personInfo user_schemas.GetPerson) (user_schemas.PersonDB, error) {
+	personDB, err := us.userDB.AddPerson(personInfo)
+	if err != nil {
+		return user_schemas.PersonDB{}, err
+	}
+
+	return personDB, nil
+}
+
+func (us *UserService) GetUserPersons(userInfo user_schemas.GetUser) ([]user_schemas.PersonDB, error) {
+	persons, err := us.userDB.GetUserPersons(userInfo)
+	if err != nil {
+		return []user_schemas.PersonDB{}, err
+	}
+
+	return persons, nil
+}
+
+func (us *UserService) ToggleHiddenPerson(personInfo user_schemas.GetPerson) (user_schemas.PersonDB, error) {
+	personDB, err := us.userDB.ToggleHiddenPerson(personInfo)
+	if err != nil {
+		return user_schemas.PersonDB{}, err
+	}
+
+	return personDB, nil
 }
 
 func (us *UserService) sendUserLogin(ul user_schemas.UserLogin) error {
