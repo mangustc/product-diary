@@ -134,6 +134,30 @@ func main() {
 	router.HandleFunc("POST /api/products/addproduct", ph.HandleAddProduct)
 	router.HandleFunc("POST /api/products/getproducts", ph.HandleGetProducts)
 	router.HandleFunc("POST /api/products/copyproduct", ph.HandleCopyProduct)
+	router.HandleFunc("POST /api/products/deleteproduct", ph.HandleDeleteProduct)
+
+	_, err = db.NewStore("database.db", "items",
+		`CREATE TABLE IF NOT EXISTS items (
+        item_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        product_id INTEGER NOT NULL,
+        item_cost REAL DEFAULT 0,
+        item_amount REAL DEFAULT 0,
+        item_type INTEGER NOT NULL,
+        person_id INTEGER DEFAULT NULL,
+        CHECK (item_type >= 1 AND item_type <= 3),
+        CHECK (item_cost >= 0),
+        CHECK (item_amount >= 0),
+        FOREIGN KEY (user_id) REFERENCES `+userStore.TableName+` (user_id) ON DELETE RESTRICT,
+        FOREIGN KEY (product_id) REFERENCES `+productStore.TableName+` (product_id) ON DELETE RESTRICT,
+        FOREIGN KEY (person_id) REFERENCES `+personStore.TableName+` (person_id) ON DELETE RESTRICT
+    );`)
+	if err != nil {
+		logger.Error.Println("Error creating item store: " + err.Error())
+		panic(err.Error())
+	} else {
+		logger.Info.Println("Successfully connected item store")
+	}
 
 	mh := handlers.NewMainHandler()
 	router.HandleFunc("GET /api/locale/index", mh.HandleLocale)

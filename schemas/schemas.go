@@ -37,6 +37,10 @@ type ConstRuleValues struct {
 	ProductCaloriesMaxValue int16
 	ProductNutrientMinValue int16
 	ProductNutrientMaxValue int16
+	ItemAmountMinValue      int16
+	ItemCostMinValue        int16
+	ItemTypeMinValue        int16
+	ItemTypeMaxValue        int16
 }
 
 var DefRV ConstRuleValues = ConstRuleValues{
@@ -53,6 +57,10 @@ var DefRV ConstRuleValues = ConstRuleValues{
 	ProductCaloriesMaxValue: 1000,
 	ProductNutrientMinValue: 0,
 	ProductNutrientMaxValue: 100,
+	ItemAmountMinValue:      0,
+	ItemCostMinValue:        0,
+	ItemTypeMinValue:        1,
+	ItemTypeMaxValue:        3,
 }
 
 type RulesMap map[string]func(field reflect.Value, structField reflect.StructField, v string) error
@@ -81,6 +89,12 @@ var Formats map[string]string = map[string]string{
 		DefRV.ProductCaloriesMinValue, DefRV.ProductCaloriesMaxValue),
 	"product_nutrient": fmt.Sprintf("ge=%d,le=%d",
 		DefRV.ProductNutrientMinValue, DefRV.ProductNutrientMaxValue),
+	"item_cost": fmt.Sprintf("ge=%d",
+		DefRV.ItemCostMinValue),
+	"item_amount": fmt.Sprintf("ge=%d",
+		DefRV.ItemAmountMinValue),
+	"item_type": fmt.Sprintf("ge=%d,le=%d",
+		DefRV.ItemTypeMinValue, DefRV.ItemTypeMaxValue),
 }
 
 func emailF(field reflect.Value, structField reflect.StructField, v string) error {
@@ -187,9 +201,17 @@ func leF(field reflect.Value, structField reflect.StructField, v string) error {
 		if field.Uint() > cmp {
 			return fmt.Errorf("%s is greater than %d", structField.Name, cmp)
 		}
+	case reflect.Float32, reflect.Float64:
+		cmp, err := strconv.ParseFloat(v, 64)
+		if err != nil {
+			panic(err.Error())
+		}
+		if field.Float() > cmp {
+			return fmt.Errorf("%s is greater than %f", structField.Name, cmp)
+		}
 	default:
 		err := fmt.Errorf("Mismatched type and value at validation tag. Field name - %s. Real - %s, expected - %s",
-			structField.Name, fieldKind.String(), "Integer")
+			structField.Name, fieldKind.String(), "Integer or Float")
 		panic(err.Error())
 	}
 
@@ -216,9 +238,17 @@ func geF(field reflect.Value, structField reflect.StructField, v string) error {
 		if field.Uint() < cmp {
 			return fmt.Errorf("%s is less than %d", structField.Name, cmp)
 		}
+	case reflect.Float32, reflect.Float64:
+		cmp, err := strconv.ParseFloat(v, 64)
+		if err != nil {
+			panic(err.Error())
+		}
+		if field.Float() < cmp {
+			return fmt.Errorf("%s is less than %f", structField.Name, cmp)
+		}
 	default:
 		err := fmt.Errorf("Mismatched type and value at validation tag. Field name - %s. Real - %s, expected - %s",
-			structField.Name, fieldKind.String(), "Integer")
+			structField.Name, fieldKind.String(), "Integer or Float")
 		panic(err.Error())
 	}
 

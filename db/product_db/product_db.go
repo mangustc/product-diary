@@ -140,18 +140,21 @@ func (pdb *ProductDB) GetProduct(data product_schemas.GetProduct) (product_schem
 	return productDB, nil
 }
 
-func (pdb *ProductDB) DeleteProduct(data product_schemas.GetProduct) error {
+func (pdb *ProductDB) DeleteProduct(data product_schemas.DeleteProduct) error {
 	query := `UPDATE ` + pdb.productStore.TableName + ` 
         SET is_deleted = TRUE
-        WHERE product_id = ?`
+        WHERE product_id = ? AND user_id = ?`
 
 	stmt, err := pdb.productStore.DB.Prepare(query)
 	defer stmt.Close()
 	if err != nil {
 		return E.ErrInternalServer
 	}
-	_, err = stmt.Exec(data.ProductID)
+	_, err = stmt.Exec(data.ProductID, data.UserID)
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return E.ErrNotFound
+		}
 		return E.ErrInternalServer
 	}
 

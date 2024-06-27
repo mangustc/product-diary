@@ -119,7 +119,7 @@ func (ph *ProductHandler) HandleAddProduct(w http.ResponseWriter, r *http.Reques
 	} else {
 		input = product_schemas.AddProduct{}
 		util.RenderComponent(&out, product_views.ProductAddRow(l, input, inputErrs), r)
-		util.RenderComponent(&out, product_views.Product(l, productDB), r)
+		util.RenderComponent(&out, product_views.Product(l, productDB, userDB.UserID), r)
 	}
 }
 
@@ -129,9 +129,22 @@ func (ph *ProductHandler) HandleGetProducts(w http.ResponseWriter, r *http.Reque
 	var out []byte
 	defer util.RespondHTTP(w, &code, &out)
 
+	var userDB user_schemas.UserDB
+	sessionUUID, err := util.GetUserSessionCookieValue(w, r)
+	if err != nil {
+		if errors.Is(err, E.ErrInternalServer) {
+			logger.Error.Printf("Failure getting session cookie.\n")
+		}
+	} else {
+		userDB, err = ph.userService.GetUserBySession(sessionUUID)
+		if err != nil {
+			logger.Error.Printf("Failure getting user from valid session cookie.\n")
+		}
+	}
+
 	var input product_schemas.GetProducts = product_schemas.GetProducts{}
 
-	err := r.ParseForm()
+	err = r.ParseForm()
 	input.SearchQuery = r.Form.Get("search_query")
 	if err != nil {
 		code = http.StatusInternalServerError
@@ -144,7 +157,7 @@ func (ph *ProductHandler) HandleGetProducts(w http.ResponseWriter, r *http.Reque
 		logger.Error.Printf("Server error %v\n", err)
 	}
 
-	util.RenderComponent(&out, product_views.ProductList(l, products), r)
+	util.RenderComponent(&out, product_views.ProductList(l, products, userDB.UserID), r)
 }
 
 func (ph *ProductHandler) HandleCopyProduct(w http.ResponseWriter, r *http.Request) {
@@ -191,5 +204,49 @@ func (ph *ProductHandler) HandleCopyProduct(w http.ResponseWriter, r *http.Reque
 	util.RenderComponent(&out, product_views.ProductAddRow(l, addProduct, product_views.ProductAddRowErrors{}), r)
 }
 
-// func (ph *ProductHandler) HandleDeleteProduct(w http.ResponseWriter, r *http.Request) {
-// }
+func (ph *ProductHandler) HandleDeleteProduct(w http.ResponseWriter, r *http.Request) {
+	_ = util.InitHTMLHandler(w, r)
+	var code int = http.StatusOK
+	var out []byte
+	defer util.RespondHTTP(w, &code, &out)
+
+	var userDB user_schemas.UserDB
+	sessionUUID, err := util.GetUserSessionCookieValue(w, r)
+	if err != nil {
+		if errors.Is(err, E.ErrInternalServer) {
+			logger.Error.Printf("Failure getting session cookie.\n")
+		}
+	} else {
+		userDB, err = ph.userService.GetUserBySession(sessionUUID)
+		if err != nil {
+			logger.Error.Printf("Failure getting user from valid session cookie.\n")
+		}
+	}
+
+	var input product_schemas.DeleteProduct = product_schemas.DeleteProduct{}
+
+	err = r.ParseForm()
+	if err != nil {
+		code = http.StatusUnprocessableEntity
+		return
+	}
+	input.ProductID, err = util.GetUintFromString(r.Form.Get("product_id"))
+	if err != nil {
+		code = http.StatusUnprocessableEntity
+		return
+	}
+	input.UserID = userDB.UserID
+
+	err = ph.productService.DeleteProduct(input)
+	if err != nil {
+		switch err {
+		case E.ErrNotFound:
+			code = http.StatusUnprocessableEntity
+			return
+		default:
+			code = http.StatusInternalServerError
+			logger.Error.Println("Error", err)
+			return
+		}
+	}
+}

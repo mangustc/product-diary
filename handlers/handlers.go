@@ -22,5 +22,5 @@ type ProductService interface {
 	AddProduct(data product_schemas.AddProduct) (product_schemas.ProductDB, error)
 	GetProducts(data product_schemas.GetProducts) ([]product_schemas.ProductDB, error)
 	GetProduct(data product_schemas.GetProduct) (product_schemas.ProductDB, error)
-	DeleteProduct(data product_schemas.GetProduct) error
+	DeleteProduct(data product_schemas.DeleteProduct) error
 }

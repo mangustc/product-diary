@@ -24,6 +24,11 @@ type GetProduct struct {
 	ProductID uint `json:"product_id" format:"id"`
 }
 
+type DeleteProduct struct {
+	ProductID uint `json:"product_id" format:"id"`
+	UserID    uint `json:"user_id" format:"id"`
+}
+
 type GetProducts struct {
 	SearchQuery string `json:"search_query"`
 }
