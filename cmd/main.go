@@ -1,7 +1,7 @@
 package main
 
 import (
-	"database/sql"
+	// "database/sql"
 	"net/http"
 
 	"github.com/bmg-c/product-diary/db"
@@ -12,15 +12,10 @@ import (
 	"github.com/bmg-c/product-diary/middleware"
 	"github.com/bmg-c/product-diary/services"
 	"github.com/bmg-c/product-diary/tests"
-	"github.com/mattn/go-sqlite3"
+	// "github.com/mattn/go-sqlite3"
 )
 
 func main() {
-	sql.Register("sqlite3_icu", &sqlite3.SQLiteDriver{
-		ConnectHook: func(conn *sqlite3.SQLiteConn) error {
-			return conn.LoadExtension("./libs/libSqliteIcu.so", "sqlite3_sqliteicu_init")
-		},
-	})
 	err := tests.TestValidation()
 	if err != nil {
 		logger.Error.Println(err.Error())
@@ -141,6 +136,7 @@ func main() {
         item_id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER NOT NULL,
         product_id INTEGER NOT NULL,
+        item_date DATE NOT NULL,
         item_cost REAL DEFAULT 0,
         item_amount REAL DEFAULT 0,
         item_type INTEGER NOT NULL,
