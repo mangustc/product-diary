@@ -45,6 +45,9 @@ const (
 	MsgAdd
 	MsgErrorUsernameEmpty
 	MsgErrorUsernameAlreadyExists
+	MsgErrorProductTitle
+	MsgErrorProductCalories
+	MsgErrorProductNutrient
 )
 
 const (
@@ -296,6 +299,30 @@ var translations map[Msg]translateFunction = map[Msg]translateFunction{
 			return fmt.Sprintf("Данное имя уже занято")
 		default:
 			return fmt.Sprintf("This name is already taken")
+		}
+	},
+	MsgErrorProductTitle: func(locale Locale, args []string) string {
+		switch locale {
+		case LocaleRuRU:
+			return fmt.Sprintf("Название должно содержать больше 4 и меньше 128 символов")
+		default:
+			return fmt.Sprintf("Title should contain more than 4 and less than 128 characters")
+		}
+	},
+	MsgErrorProductCalories: func(locale Locale, args []string) string {
+		switch locale {
+		case LocaleRuRU:
+			return fmt.Sprintf("Количество калорий не может быть больше 1000")
+		default:
+			return fmt.Sprintf("Amount of calories can't be more than 1000")
+		}
+	},
+	MsgErrorProductNutrient: func(locale Locale, args []string) string {
+		switch locale {
+		case LocaleRuRU:
+			return fmt.Sprintf("Значение не может быть больше 100г")
+		default:
+			return fmt.Sprintf("Value can't be more than 100g")
 		}
 	},
 }

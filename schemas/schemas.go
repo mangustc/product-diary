@@ -24,23 +24,35 @@ var (
 )
 
 type ConstRuleValues struct {
-	IDMinValue        int16
-	UsernameMinLength uint16
-	UsernameMaxLength uint16
-	PasswordMinLength uint16
-	PasswordMaxLength uint16
-	CodeLength        uint16
-	CodeRegex         string
+	IDMinValue              int16
+	UsernameMinLength       uint16
+	UsernameMaxLength       uint16
+	PasswordMinLength       uint16
+	PasswordMaxLength       uint16
+	CodeLength              uint16
+	CodeRegex               string
+	ProductTitleMinLength   uint16
+	ProductTitleMaxLength   uint16
+	ProductCaloriesMinValue int16
+	ProductCaloriesMaxValue int16
+	ProductNutrientMinValue int16
+	ProductNutrientMaxValue int16
 }
 
 var DefRV ConstRuleValues = ConstRuleValues{
-	IDMinValue:        1,
-	UsernameMinLength: 2,
-	UsernameMaxLength: 12,
-	PasswordMinLength: 6,
-	PasswordMaxLength: 30,
-	CodeLength:        6,
-	CodeRegex:         "^[A-Z0-9]+$",
+	IDMinValue:              1,
+	UsernameMinLength:       2,
+	UsernameMaxLength:       12,
+	PasswordMinLength:       6,
+	PasswordMaxLength:       30,
+	CodeLength:              6,
+	CodeRegex:               "^[A-Z0-9]+$",
+	ProductTitleMinLength:   4,
+	ProductTitleMaxLength:   128,
+	ProductCaloriesMinValue: 0,
+	ProductCaloriesMaxValue: 1000,
+	ProductNutrientMinValue: 0,
+	ProductNutrientMaxValue: 100,
 }
 
 type RulesMap map[string]func(field reflect.Value, structField reflect.StructField, v string) error
@@ -63,6 +75,12 @@ var Formats map[string]string = map[string]string{
 		DefRV.PasswordMinLength, DefRV.PasswordMaxLength),
 	"code": fmt.Sprintf("min_length=%d,max_length=%d,regex=%s",
 		DefRV.CodeLength, DefRV.CodeLength, DefRV.CodeRegex),
+	"product_title": fmt.Sprintf("min_length=%d,max_length=%d",
+		DefRV.ProductTitleMinLength, DefRV.ProductTitleMaxLength),
+	"product_calories": fmt.Sprintf("ge=%d,le=%d",
+		DefRV.ProductCaloriesMinValue, DefRV.ProductCaloriesMaxValue),
+	"product_nutrient": fmt.Sprintf("ge=%d,le=%d",
+		DefRV.ProductNutrientMinValue, DefRV.ProductNutrientMaxValue),
 }
 
 func emailF(field reflect.Value, structField reflect.StructField, v string) error {

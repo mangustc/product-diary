@@ -1,18 +1,26 @@
 package main
 
 import (
+	"database/sql"
 	"net/http"
 
 	"github.com/bmg-c/product-diary/db"
+	"github.com/bmg-c/product-diary/db/product_db"
 	"github.com/bmg-c/product-diary/db/user_db"
 	"github.com/bmg-c/product-diary/handlers"
 	"github.com/bmg-c/product-diary/logger"
 	"github.com/bmg-c/product-diary/middleware"
 	"github.com/bmg-c/product-diary/services"
 	"github.com/bmg-c/product-diary/tests"
+	"github.com/mattn/go-sqlite3"
 )
 
 func main() {
+	sql.Register("sqlite3_icu", &sqlite3.SQLiteDriver{
+		ConnectHook: func(conn *sqlite3.SQLiteConn) error {
+			return conn.LoadExtension("./libs/libSqliteIcu.so", "sqlite3_sqliteicu_init")
+		},
+	})
 	err := tests.TestValidation()
 	if err != nil {
 		logger.Error.Println(err.Error())
@@ -95,6 +103,37 @@ func main() {
 	router.HandleFunc("POST /api/users/logout/logout", uh.HandleLogout)
 	router.HandleFunc("POST /api/users/person/togglehidden", uh.HandleTogglePerson)
 	router.HandleFunc("POST /api/users/person/addperson", uh.HandleAddPerson)
+
+	productStore, err := db.NewStore("database.db", "products",
+		`CREATE TABLE IF NOT EXISTS products (
+        product_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        product_title VARCHAR(128) NOT NULL,
+        product_calories INTEGER DEFAULT 0,
+        product_fats INTEGER DEFAULT 0,
+        product_carbs INTEGER DEFAULT 0,
+        product_proteins INTEGER DEFAULT 0,
+        user_id INTEGER NOT NULL,
+        is_deleted INTEGER NOT NULL DEFAULT FALSE,
+        CHECK (product_fats + product_carbs + product_proteins <= 100),
+        CHECK (length(product_title) >= 4 AND length(product_title) <= 128),
+        FOREIGN KEY (user_id) REFERENCES `+userStore.TableName+` (user_id) ON DELETE RESTRICT
+    );`)
+	if err != nil {
+		logger.Error.Println("Error creating product store: " + err.Error())
+		panic(err.Error())
+	} else {
+		logger.Info.Println("Successfully connected product store")
+	}
+	pdb, err := product_db.NewProductDB(productStore)
+	if err != nil {
+		logger.Error.Println("Error creating product database layer: " + err.Error())
+	}
+	ps := services.NewProductService(pdb)
+	ph := handlers.NewProductHandler(ps, us)
+	router.HandleFunc("GET /products", ph.HandleProductsPage)
+	router.HandleFunc("POST /api/products/addproduct", ph.HandleAddProduct)
+	router.HandleFunc("POST /api/products/getproducts", ph.HandleGetProducts)
+	router.HandleFunc("POST /api/products/copyproduct", ph.HandleCopyProduct)
 
 	mh := handlers.NewMainHandler()
 	router.HandleFunc("GET /api/locale/index", mh.HandleLocale)

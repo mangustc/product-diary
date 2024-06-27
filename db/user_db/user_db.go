@@ -275,9 +275,10 @@ func (udb *UserDB) AddPerson(personInfo user_schemas.GetPerson) (user_schemas.Pe
 
 func (udb *UserDB) GetUserPersons(userInfo user_schemas.GetUser) ([]user_schemas.PersonDB, error) {
 	var personDB user_schemas.PersonDB = user_schemas.PersonDB{}
-	query := `SELECT person_id, user_id, person_name, is_hidden FROM ` + udb.personStore.TableName
+	query := `SELECT person_id, user_id, person_name, is_hidden FROM ` + udb.personStore.TableName + `
+        WHERE user_id=?`
 
-	rows, err := udb.userStore.DB.Query(query)
+	rows, err := udb.userStore.DB.Query(query, userInfo.UserID)
 	if err != nil {
 		return []user_schemas.PersonDB{}, E.ErrInternalServer
 	}

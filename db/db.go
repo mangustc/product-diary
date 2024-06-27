@@ -30,7 +30,7 @@ func NewStore(dbName string, tableName string, createQuery string) (*Store, erro
 
 func getDB(dbName string) (*sql.DB, error) {
 	// Init SQLite3 database
-	db, err := sql.Open("sqlite3", dbName)
+	db, err := sql.Open("sqlite3_icu", dbName)
 	if err != nil {
 		return nil, err
 	}

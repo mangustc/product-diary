@@ -12,20 +12,7 @@ import (
 	"github.com/bmg-c/product-diary/schemas/user_schemas"
 	"github.com/bmg-c/product-diary/util"
 	"github.com/bmg-c/product-diary/views/user_views"
-	"github.com/google/uuid"
 )
-
-type UserService interface {
-	GetUser(userInfo user_schemas.GetUser) (user_schemas.UserPublic, error)
-	GetUsersAll() ([]user_schemas.UserPublic, error)
-	SigninUser(ur user_schemas.UserSignin) error
-	ConfirmSignin(ucr user_schemas.UserConfirmSignin) error
-	LoginUser(ul user_schemas.UserLogin) (uuid.UUID, error)
-	GetUserBySession(sessionUUID uuid.UUID) (user_schemas.UserDB, error)
-	AddPerson(personInfo user_schemas.GetPerson) (user_schemas.PersonDB, error)
-	GetUserPersons(userInfo user_schemas.GetUser) ([]user_schemas.PersonDB, error)
-	ToggleHiddenPerson(personInfo user_schemas.GetPerson) (user_schemas.PersonDB, error)
-}
 
 func NewUserHandler(us UserService) *UserHandler {
 	return &UserHandler{

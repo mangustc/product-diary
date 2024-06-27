@@ -3,4 +3,5 @@
 /node_modules/
 /views/**/*.go
 *.db
-
+/libs
+*.so

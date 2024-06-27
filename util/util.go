@@ -162,3 +162,11 @@ func IsErrorSQL(err error, sqlErr error) bool {
 	}
 	return false
 }
+
+func GetUintFromString(str string) (uint, error) {
+	ui, err := strconv.ParseUint(str, 10, 0)
+	if err != nil {
+		return 0, E.ErrUnprocessableEntity
+	}
+	return uint(ui), nil
+}

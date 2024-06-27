@@ -1,0 +1,131 @@
+package product_views
+
+import (
+	"github.com/bmg-c/product-diary/views"
+	L "github.com/bmg-c/product-diary/localization"
+	"github.com/bmg-c/product-diary/schemas/product_schemas"
+	"fmt"
+)
+
+type ProductAddRowErrors struct {
+	TitleErr    error
+	CaloriesErr error
+	FatsErr     error
+	CarbsErr    error
+	ProteinsErr error
+}
+
+templ ProductAddRowInput(l *L.Localizer, name string, typ string, value string, err error) {
+	if err != nil {
+		<div style="display: flex; flex-direction: column">
+			<input name={ name } type={ typ } value={ value }/>
+			<span>{ l.Localize(err.Error()) }</span>
+		</div>
+	} else {
+		<input name={ name } type={ typ } value={ value }/>
+	}
+}
+
+templ ProductAddRow(l *L.Localizer, addProduct product_schemas.AddProduct, errs ProductAddRowErrors) {
+	<tr id="product-add-row">
+		<th>
+			@ProductAddRowInput(l, "product_title", "text", addProduct.ProductTitle, errs.TitleErr)
+		</th>
+		<th>
+			@ProductAddRowInput(l, "product_calories", "number", fmt.Sprint(addProduct.ProductCalories), errs.CaloriesErr)
+		</th>
+		<th>
+			@ProductAddRowInput(l, "product_fats", "number", fmt.Sprint(addProduct.ProductFats), errs.FatsErr)
+		</th>
+		<th>
+			@ProductAddRowInput(l, "product_carbs", "number", fmt.Sprint(addProduct.ProductCarbs), errs.CarbsErr)
+		</th>
+		<th>
+			@ProductAddRowInput(l, "product_proteins", "number", fmt.Sprint(addProduct.ProductProteins), errs.ProteinsErr)
+		</th>
+		<th></th>
+		<th>
+			<button
+				hx-post="/api/products/addproduct"
+				hx-include="closest tr"
+				hx-target="#product-add-row"
+				hx-swap="outerHTML"
+			>Add</button>
+		</th>
+	</tr>
+}
+
+templ ProductOOB(l *L.Localizer, productDB product_schemas.ProductDB) {
+	<div id="product-add-row" hx-swap-oob="afterend">
+		@Product(l, productDB)
+	</div>
+}
+
+templ ProductList(l *L.Localizer, products []product_schemas.ProductDB) {
+	@ProductAddRow(l, product_schemas.AddProduct{}, ProductAddRowErrors{})
+	for _, productDB := range products {
+		@Product(l, productDB)
+	}
+}
+
+templ ProductsPage(l *L.Localizer) {
+	@views.Layout("Products") {
+		<script>
+            document.addEventListener("DOMContentLoaded", (event) => {
+                document.body.addEventListener('htmx:beforeSwap', function(evt) {
+                    if (evt.detail.xhr.status == 422 || evt.detail.xhr.status == 404) {
+                        evt.detail.shouldSwap = true;
+                        evt.detail.isError = false;
+                    } else if (evt.detail.xhr.status == 200) {
+                        // document.getElementById("user-output-error").innerHTML = ""
+                    }
+                });
+            });
+        </script>
+		<input
+			id="product-search"
+			name="search_query"
+			type="text"
+			hx-trigger="input changed delay:500ms, search"
+			hx-target="#product-table"
+			hx-swap="innerHTML"
+			hx-post="/api/products/getproducts"
+		/>
+		<h2>Products:</h2>
+		<table>
+			<thead>
+				<tr>
+					<th>Title</th>
+					<th>Calories</th>
+					<th>Fats</th>
+					<th>Carbs</th>
+					<th>Proteins</th>
+					<th>Creator</th>
+					<th>Actions</th>
+				</tr>
+			</thead>
+			<tbody id="product-table" hx-target="closest tr" hx-swap="outerHTML">
+				<tr hx-swap="outerHTML" hx-trigger="load" hx-post="/api/products/getproducts"></tr>
+			</tbody>
+		</table>
+	}
+}
+
+// Down here because setting hx-vals attribute breaks LSP
+templ Product(l *L.Localizer, productDB product_schemas.ProductDB) {
+	<tr>
+		<th>{ productDB.ProductTitle }</th>
+		<th>{ fmt.Sprint(productDB.ProductCalories) }</th>
+		<th>{ fmt.Sprint(productDB.ProductFats) }</th>
+		<th>{ fmt.Sprint(productDB.ProductCarbs) }</th>
+		<th>{ fmt.Sprint(productDB.ProductProteins) }</th>
+		<th>{ fmt.Sprint(productDB.UserID) }</th>
+		<th>
+			<button
+				hx-post="/api/products/copyproduct"
+				hx-target="#product-add-row"
+				hx-vals={ fmt.Sprintf(`{"product_id": "%d"}`, productDB.ProductID) }
+			>Copy</button>
+		</th>
+	</tr>
+}
