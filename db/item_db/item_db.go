@@ -311,3 +311,81 @@ func (idb *ItemDB) DeleteItem(data item_schemas.DeleteItem) error {
 
 	return nil
 }
+
+func (idb *ItemDB) GetItemsRange(data item_schemas.GetItemsRange) ([]item_schemas.ItemParsed, error) {
+	var itemParsed item_schemas.ItemParsed = item_schemas.ItemParsed{}
+	query := fmt.Sprintf(`
+        SELECT
+            %[1]s.item_id,
+            %[1]s.user_id,
+            %[1]s.product_id,
+            %[1]s.item_date,
+            %[1]s.item_cost,
+            %[1]s.item_amount,
+            %[1]s.item_type,
+            %[1]s.person_id,
+            %[2]s.product_title,
+            %[2]s.product_calories,
+            %[2]s.product_fats,
+            %[2]s.product_carbs,
+            %[2]s.product_proteins,
+            %[3]s.person_name
+        FROM ((%[1]s
+            INNER JOIN %[2]s ON %[1]s.product_id = %[2]s.product_id) 
+            INNER JOIN %[3]s ON %[1]s.user_id = %[3]s.user_id)
+        WHERE 
+            (%[1]s.user_id = ? AND (%[1]s.item_date >= ? AND %[1]s.item_date <= ?))
+        GROUP BY %[1]s.item_id`,
+		idb.itemStore.TableName,
+		idb.productStore.TableName,
+		idb.personStore.TableName,
+	)
+
+	rows, err := idb.itemStore.DB.Query(query,
+		data.UserID,
+		data.ItemDateFrom.Format("2006-01-02"),
+		data.ItemDateTo.Format("2006-01-02"),
+	)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return []item_schemas.ItemParsed{}, nil
+		}
+		return []item_schemas.ItemParsed{}, E.ErrInternalServer
+	}
+	defer rows.Close()
+
+	personIDNull := sql.NullInt64{}
+	personNameNull := sql.NullString{}
+	items := []item_schemas.ItemParsed{}
+	for rows.Next() {
+		err = rows.Scan(
+			&itemParsed.ItemID,
+			&itemParsed.UserID,
+			&itemParsed.ProductID,
+			&itemParsed.ItemDate,
+			&itemParsed.ItemCost,
+			&itemParsed.ItemAmount,
+			&itemParsed.ItemType,
+			&personIDNull,
+			&itemParsed.ProductTitle,
+			&itemParsed.ProductCalories,
+			&itemParsed.ProductFats,
+			&itemParsed.ProductCarbs,
+			&itemParsed.ProductProteins,
+			&personNameNull,
+		)
+		if personIDNull.Valid {
+			itemParsed.PersonID = uint(personIDNull.Int64)
+			itemParsed.PersonName = personNameNull.String
+		} else {
+			itemParsed.PersonID = 0
+			itemParsed.PersonName = ""
+		}
+		if err != nil {
+			return []item_schemas.ItemParsed{}, E.ErrInternalServer
+		}
+		items = append(items, itemParsed)
+	}
+
+	return items, nil
+}

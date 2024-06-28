@@ -161,10 +161,12 @@ func main() {
 	}
 	is := services.NewItemService(idb)
 	ih := handlers.NewItemHandler(is, us)
+	router.HandleFunc("GET /analytics", ih.HandleAnalyticsPage)
 	router.HandleFunc("POST /api/items/getitems", ih.HandleGetItems)
 	router.HandleFunc("POST /api/items/additem", ih.HandleAddItem)
 	router.HandleFunc("POST /api/items/deleteitem", ih.HandleDeleteItem)
 	router.HandleFunc("POST /api/items/changeitem", ih.HandleChangeItem)
+	router.HandleFunc("POST /api/items/getanalyticsrange", ih.HandleGetAnalyticsRange)
 
 	mh := handlers.NewMainHandler()
 	router.HandleFunc("GET /api/locale/index", mh.HandleLocale)

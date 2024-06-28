@@ -1,0 +1,44 @@
+package analytics_views
+
+import L "github.com/bmg-c/product-diary/localization"
+import "github.com/bmg-c/product-diary/views"
+import "fmt"
+import "github.com/bmg-c/product-diary/schemas/item_schemas"
+
+templ AnalyticsRange(l *L.Localizer, a item_schemas.Analytics) {
+	<div id="analytics-range" style="display: flex; flex-direction: column;">
+		<span>Total spent: { fmt.Sprint(a.TotalSpent) }</span>
+		for _, person := range a.Persons {
+			<span>{ person.PersonDB.PersonName }: { fmt.Sprint(person.TotalDebt) }</span>
+		}
+		<span>Total Calories: { fmt.Sprint(a.TotalCalories) }</span>
+		<span>Total Fats: { fmt.Sprint(a.TotalFats) }</span>
+		<span>Total Carbs: { fmt.Sprint(a.TotalCarbs) }</span>
+		<span>Total Proteins: { fmt.Sprint(a.TotalProteins) }</span>
+	</div>
+}
+
+templ AnalyticsPage(l *L.Localizer) {
+	@views.Layout("Analytics") {
+		<div style="display: flex; flex-direction: row">
+			<input
+				id="item-date-from"
+				name="item_date_from"
+				type="date"
+			/>
+			<input
+				id="item-date-to"
+				name="item_date_to"
+				type="date"
+			/>
+			<button
+				hx-swap="innerHTML"
+				hx-post="/api/items/getanalyticsrange"
+				hx-include="closest div"
+				hx-target="#analytics-range"
+				hx-trigger="click, load"
+			>Show</button>
+		</div>
+		@AnalyticsRange(l, item_schemas.Analytics{})
+	}
+}

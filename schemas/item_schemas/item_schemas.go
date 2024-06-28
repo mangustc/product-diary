@@ -1,6 +1,10 @@
 package item_schemas
 
-import "time"
+import (
+	"time"
+
+	"github.com/bmg-c/product-diary/schemas/user_schemas"
+)
 
 const (
 	// Purchase made by the user
@@ -74,4 +78,24 @@ type ItemParsed struct {
 	ProductCarbs    uint   `json:"product_carbs" format:"product_nutrient"`
 	ProductProteins uint   `json:"product_proteins" format:"product_nutrient"`
 	PersonName      string `json:"person_name" format:"username" validate:"omitzero"`
+}
+
+type GetItemsRange struct {
+	UserID       uint      `json:"user_id" format:"id"`
+	ItemDateFrom time.Time `json:"item_date_from"`
+	ItemDateTo   time.Time `json:"item_date_to"`
+}
+
+type PersonAnalytics struct {
+	PersonDB  user_schemas.PersonDB `json:"person_db"`
+	TotalDebt float32               `json:"total_debt"`
+}
+
+type Analytics struct {
+	TotalSpent    float32           `json:"total_spent"`
+	Persons       []PersonAnalytics `json:"persons"`
+	TotalCalories float32           `json:"total_calories"`
+	TotalFats     float32           `json:"total_fats"`
+	TotalCarbs    float32           `json:"total_carbs"`
+	TotalProteins float32           `json:"total_preteins"`
 }

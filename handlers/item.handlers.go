@@ -11,6 +11,7 @@ import (
 	"github.com/bmg-c/product-diary/schemas/item_schemas"
 	"github.com/bmg-c/product-diary/schemas/user_schemas"
 	"github.com/bmg-c/product-diary/util"
+	"github.com/bmg-c/product-diary/views/analytics_views"
 	"github.com/bmg-c/product-diary/views/product_views"
 )
 
@@ -305,4 +306,75 @@ func (ih *ItemHandler) HandleChangeItem(w http.ResponseWriter, r *http.Request) 
 	}
 
 	util.RenderComponent(&out, product_views.Item(l, itemParsed, persons), r)
+}
+
+func (ih *ItemHandler) HandleGetAnalyticsRange(w http.ResponseWriter, r *http.Request) {
+	l := util.InitHTMLHandler(w, r)
+	var code int = http.StatusOK
+	var out []byte
+	defer util.RespondHTTP(w, &code, &out)
+
+	var userDB user_schemas.UserDB
+	sessionUUID, err := util.GetUserSessionCookieValue(w, r)
+	if err != nil {
+		if errors.Is(err, E.ErrInternalServer) {
+			logger.Error.Printf("Failure getting session cookie.\n")
+		}
+	} else {
+		userDB, err = ih.userService.GetUserBySession(sessionUUID)
+		if err != nil {
+			logger.Error.Printf("Failure getting user from valid session cookie.\n")
+		}
+	}
+
+	var input item_schemas.GetItemsRange = item_schemas.GetItemsRange{}
+
+	err = r.ParseForm()
+	if err != nil {
+		code = http.StatusInternalServerError
+		logger.Error.Printf("Error???? %v\n", err)
+		return
+	}
+
+	input.ItemDateFrom, err = time.Parse("2006-01-02", r.Form.Get("item_date_from"))
+	if err != nil {
+		code = http.StatusUnprocessableEntity
+		return
+	}
+	input.ItemDateTo, err = time.Parse("2006-01-02", r.Form.Get("item_date_to"))
+	if err != nil {
+		code = http.StatusUnprocessableEntity
+		return
+	}
+	input.UserID = userDB.UserID
+
+	ve := schemas.ValidateStruct(input)
+	if ve != nil {
+		code = http.StatusUnprocessableEntity
+		return
+	}
+
+	a, err := ih.itemService.GetAnalyticsRange(input)
+	if err != nil {
+		switch err {
+		case E.ErrUnprocessableEntity:
+			code = http.StatusUnprocessableEntity
+			return
+		default:
+			code = http.StatusInternalServerError
+			logger.Error.Printf("Server error %v\n", err)
+			return
+		}
+	}
+
+	util.RenderComponent(&out, analytics_views.AnalyticsRange(l, a), r)
+}
+
+func (ih *ItemHandler) HandleAnalyticsPage(w http.ResponseWriter, r *http.Request) {
+	l := util.InitHTMLHandler(w, r)
+	var code int = http.StatusOK
+	var out []byte
+	defer util.RespondHTTP(w, &code, &out)
+
+	util.RenderComponent(&out, analytics_views.AnalyticsPage(l), r)
 }
