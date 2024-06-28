@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"github.com/bmg-c/product-diary/schemas/item_schemas"
 	"github.com/bmg-c/product-diary/schemas/product_schemas"
 	"github.com/bmg-c/product-diary/schemas/user_schemas"
 	"github.com/google/uuid"
@@ -23,4 +24,12 @@ type ProductService interface {
 	GetProducts(data product_schemas.GetProducts) ([]product_schemas.ProductDB, error)
 	GetProduct(data product_schemas.GetProduct) (product_schemas.ProductDB, error)
 	DeleteProduct(data product_schemas.DeleteProduct) error
+}
+
+type ItemService interface {
+	AddItem(data item_schemas.AddItem) (item_schemas.ItemParsed, error)
+	DeleteItem(data item_schemas.DeleteItem) error
+	// GetItem(data item_schemas.GetItem) (item_schemas.ItemParsed, error)
+	GetItems(data item_schemas.GetItems) ([]item_schemas.ItemParsed, error)
+	ChangeItem(data item_schemas.ChangeItem) (item_schemas.ItemParsed, error)
 }

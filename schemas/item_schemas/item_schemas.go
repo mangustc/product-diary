@@ -19,16 +19,17 @@ type ItemDB struct {
 	ItemCost   float32   `json:"item_cost" format:"item_cost"`
 	ItemAmount float32   `json:"item_amount" format:"item_amount"`
 	ItemType   uint8     `json:"item_type" format:"item_type"`
-	PersonID   uint      `json:"person_id" format:"id"`
+	PersonID   uint      `json:"person_id" format:"id" validate:"omitzero"`
 }
 
 type AddItem struct {
-	UserID     uint    `json:"user_id" format:"id"`
-	ProductID  uint    `json:"product_id" format:"id"`
-	ItemCost   float32 `json:"item_cost" format:"item_cost"`
-	ItemAmount float32 `json:"item_amount" format:"item_amount"`
-	ItemType   uint8   `json:"item_type" format:"item_type"`
-	PersonID   uint    `json:"person_id" format:"id"`
+	UserID    uint      `json:"user_id" format:"id"`
+	ProductID uint      `json:"product_id" format:"id"`
+	ItemDate  time.Time `json:"item_date"`
+	// ItemCost   float32 `json:"item_cost" format:"item_cost"`
+	// ItemAmount float32 `json:"item_amount" format:"item_amount"`
+	// ItemType   uint8   `json:"item_type" format:"item_type"`
+	// PersonID   uint    `json:"person_id" format:"id"`
 }
 
 type DeleteItem struct {
@@ -65,12 +66,12 @@ type ItemParsed struct {
 	ItemCost   float32   `json:"item_cost" format:"item_cost"`
 	ItemAmount float32   `json:"item_amount" format:"item_amount"`
 	ItemType   uint8     `json:"item_type" format:"item_type"`
-	PersonID   uint      `json:"person_id" format:"id"`
+	PersonID   uint      `json:"person_id" format:"id" validate:"omitzero"`
 	// Parsed info
 	ProductTitle    string `json:"product_title" format:"product_title"`
 	ProductCalories uint   `json:"product_calories" format:"product_calories"`
 	ProductFats     uint   `json:"product_fats" format:"product_nutrient"`
 	ProductCarbs    uint   `json:"product_carbs" format:"product_nutrient"`
 	ProductProteins uint   `json:"product_proteins" format:"product_nutrient"`
-	PersonName      string `json:"person_name" format:"username"`
+	PersonName      string `json:"person_name" format:"username" validate:"omitzero"`
 }

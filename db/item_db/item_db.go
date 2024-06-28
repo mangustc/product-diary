@@ -4,10 +4,11 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"time"
+	"strings"
 
 	"github.com/bmg-c/product-diary/db"
 	E "github.com/bmg-c/product-diary/errorhandler"
+	"github.com/bmg-c/product-diary/logger"
 	"github.com/bmg-c/product-diary/schemas"
 	"github.com/bmg-c/product-diary/schemas/item_schemas"
 	"github.com/bmg-c/product-diary/util"
@@ -33,40 +34,36 @@ func NewItemDB(itemStore *db.Store, productStore *db.Store, personStore *db.Stor
 
 func (idb *ItemDB) AddItem(data item_schemas.AddItem) (item_schemas.ItemDB, error) {
 	query := `INSERT INTO ` + idb.itemStore.TableName + `
-        (item_id, user_id, product_id, item_date, item_cost, item_amount, item_type, person_id)
-        VALUES (NULL, ?, ?, date('now'), ?, ?, ?, ?)`
+        (item_id, user_id, product_id, item_date)
+        VALUES (NULL, ?, ?, ?)
+        RETURNING *`
 	stmt, err := idb.itemStore.DB.Prepare(query)
 	defer stmt.Close()
 	if err != nil {
 		return item_schemas.ItemDB{}, E.ErrInternalServer
 	}
-	res, err := stmt.Exec(
-		&data.UserID,
-		&data.ProductID,
-		&data.ItemCost,
-		&data.ItemAmount,
-		&data.ItemType,
-		&data.PersonID,
+
+	nullPersonID := sql.NullInt64{}
+	itemDB := item_schemas.ItemDB{}
+	err = stmt.QueryRow(
+		data.UserID,
+		data.ProductID,
+		data.ItemDate.Format("2006-01-02"),
+	).Scan(
+		&itemDB.ItemID,
+		&itemDB.UserID,
+		&itemDB.ProductID,
+		&itemDB.ItemDate,
+		&itemDB.ItemCost,
+		&itemDB.ItemAmount,
+		&itemDB.ItemType,
+		&nullPersonID,
 	)
 	if err != nil {
 		if util.IsErrorSQL(err, sqlite3.ErrConstraint) {
 			return item_schemas.ItemDB{}, E.ErrUnprocessableEntity
 		}
 		return item_schemas.ItemDB{}, E.ErrInternalServer
-	}
-	createdID, err := res.LastInsertId()
-	if err != nil {
-		return item_schemas.ItemDB{}, E.ErrInternalServer
-	}
-	itemDB := item_schemas.ItemDB{
-		ItemID:     uint(createdID),
-		UserID:     data.UserID,
-		ProductID:  data.PersonID,
-		ItemDate:   time.Now(),
-		ItemCost:   data.ItemCost,
-		ItemAmount: data.ItemAmount,
-		ItemType:   data.ItemType,
-		PersonID:   data.PersonID,
 	}
 
 	return itemDB, nil
@@ -92,18 +89,19 @@ func (idb *ItemDB) GetItems(data item_schemas.GetItems) ([]item_schemas.ItemPars
             %[3]s.person_name
         FROM ((%[1]s
             INNER JOIN %[2]s ON %[1]s.product_id = %[2]s.product_id) 
-            INNER JOIN %[3]s ON %[3]s.person_id = %[3]s.person_id)
+            INNER JOIN %[3]s ON %[1]s.user_id = %[3]s.user_id)
         WHERE (
-            (%[1]s.user_id = ? AND %[1]s.date = ?) AND 
+            (%[1]s.user_id = ? AND %[1]s.item_date = ?) AND 
             (length(trim(
                 replace(lower(?), ' ', ''),
                 replace(lower(
-                    product_title ||
-                    product_calories ||
-                    product_fats ||
-                    product_carbs ||
-                    product_proteins), ' ', '')
-            )) < 3)`,
+                    %[2]s.product_title ||
+                    %[2]s.product_calories ||
+                    %[2]s.product_fats ||
+                    %[2]s.product_carbs ||
+                    %[2]s.product_proteins), ' ', '')
+            )) < 3))
+        GROUP BY %[1]s.item_id`,
 		idb.itemStore.TableName,
 		idb.productStore.TableName,
 		idb.personStore.TableName,
@@ -118,6 +116,8 @@ func (idb *ItemDB) GetItems(data item_schemas.GetItems) ([]item_schemas.ItemPars
 	}
 	defer rows.Close()
 
+	personIDNull := sql.NullInt64{}
+	personNameNull := sql.NullString{}
 	items := []item_schemas.ItemParsed{}
 	for rows.Next() {
 		err = rows.Scan(
@@ -128,14 +128,21 @@ func (idb *ItemDB) GetItems(data item_schemas.GetItems) ([]item_schemas.ItemPars
 			&itemParsed.ItemCost,
 			&itemParsed.ItemAmount,
 			&itemParsed.ItemType,
-			&itemParsed.PersonID,
+			&personIDNull,
 			&itemParsed.ProductTitle,
 			&itemParsed.ProductCalories,
 			&itemParsed.ProductFats,
 			&itemParsed.ProductCarbs,
 			&itemParsed.ProductProteins,
-			&itemParsed.PersonName,
+			&personNameNull,
 		)
+		if personIDNull.Valid {
+			itemParsed.PersonID = uint(personIDNull.Int64)
+			itemParsed.PersonName = personNameNull.String
+		} else {
+			itemParsed.PersonID = 0
+			itemParsed.PersonName = ""
+		}
 		if err != nil {
 			return []item_schemas.ItemParsed{}, E.ErrInternalServer
 		}
@@ -165,9 +172,10 @@ func (idb *ItemDB) GetItem(data item_schemas.GetItem) (item_schemas.ItemParsed, 
             %[3]s.person_name
         FROM ((%[1]s
             INNER JOIN %[2]s ON %[1]s.product_id = %[2]s.product_id) 
-            INNER JOIN %[3]s ON %[3]s.person_id = %[3]s.person_id)
-        WHERE (
-            (%[1]s.item_id = ? AND %[1]s.user_id = ?)`,
+            INNER JOIN %[3]s ON %[1]s.user_id = %[3]s.user_id)
+        WHERE 
+            (%[1]s.item_id = ? AND %[1]s.user_id = ?)
+        GROUP BY %[1]s.item_id`,
 		idb.itemStore.TableName,
 		idb.productStore.TableName,
 		idb.personStore.TableName,
@@ -179,6 +187,8 @@ func (idb *ItemDB) GetItem(data item_schemas.GetItem) (item_schemas.ItemParsed, 
 	}
 	defer stmt.Close()
 
+	personIDNull := sql.NullInt64{}
+	personNameNull := sql.NullString{}
 	err = stmt.QueryRow(
 		data.ItemID,
 		data.UserID,
@@ -190,14 +200,21 @@ func (idb *ItemDB) GetItem(data item_schemas.GetItem) (item_schemas.ItemParsed, 
 		&itemParsed.ItemCost,
 		&itemParsed.ItemAmount,
 		&itemParsed.ItemType,
-		&itemParsed.PersonID,
+		&personIDNull,
 		&itemParsed.ProductTitle,
 		&itemParsed.ProductCalories,
 		&itemParsed.ProductFats,
 		&itemParsed.ProductCarbs,
 		&itemParsed.ProductProteins,
-		&itemParsed.PersonName,
+		&personNameNull,
 	)
+	if personIDNull.Valid {
+		itemParsed.PersonID = uint(personIDNull.Int64)
+		itemParsed.PersonName = personNameNull.String
+	} else {
+		itemParsed.PersonID = 0
+		itemParsed.PersonName = ""
+	}
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return item_schemas.ItemParsed{}, E.ErrNotFound
@@ -210,33 +227,34 @@ func (idb *ItemDB) GetItem(data item_schemas.GetItem) (item_schemas.ItemParsed, 
 
 func (idb *ItemDB) ChangeItem(data item_schemas.ChangeItem) (item_schemas.ItemDB, error) {
 	var itemDB item_schemas.ItemDB = item_schemas.ItemDB{}
-	setOptions := ""
+	setOptions := []string{}
 	args := []any{}
 	if !schemas.IsZero(data.ProductID) {
-		setOptions += "SET product_id = ?\n"
+		setOptions = append(setOptions, "product_id = ?")
 		args = append(args, data.ProductID)
 	}
 	if !schemas.IsZero(data.ItemCost) {
-		setOptions += "SET item_cost = ?\n"
+		setOptions = append(setOptions, "item_cost = ?")
 		args = append(args, data.ItemCost)
 	}
 	if !schemas.IsZero(data.ItemAmount) {
-		setOptions += "SET item_amount = ?\n"
+		setOptions = append(setOptions, "item_amount = ?")
 		args = append(args, data.ItemAmount)
 	}
 	if !schemas.IsZero(data.ItemType) {
-		setOptions += "SET item_type = ?\n"
+		setOptions = append(setOptions, "item_type = ?")
 		args = append(args, data.ItemType)
 	}
 	if !schemas.IsZero(data.PersonID) {
-		setOptions += "SET person_id = ?\n"
+		setOptions = append(setOptions, "person_id = ?")
 		args = append(args, data.PersonID)
 	}
-	query := `UPDATE ` + idb.itemStore.TableName +
-		setOptions + `
+	query := `UPDATE ` + idb.itemStore.TableName + "\nSET " +
+		strings.Join(setOptions, ", ") + `
         WHERE item_id = ? AND user_id = ?
         RETURNING *`
 	args = append(args, data.ItemID, data.UserID)
+	// logger.Info.Println(query)
 
 	stmt, err := idb.itemStore.DB.Prepare(query)
 	if err != nil {
@@ -244,6 +262,7 @@ func (idb *ItemDB) ChangeItem(data item_schemas.ChangeItem) (item_schemas.ItemDB
 	}
 	defer stmt.Close()
 
+	personIDNull := sql.NullInt64{}
 	err = stmt.QueryRow(
 		args...,
 	).Scan(
@@ -254,11 +273,18 @@ func (idb *ItemDB) ChangeItem(data item_schemas.ChangeItem) (item_schemas.ItemDB
 		&itemDB.ItemCost,
 		&itemDB.ItemAmount,
 		&itemDB.ItemType,
-		&itemDB.PersonID,
+		&personIDNull,
 	)
+	if personIDNull.Valid {
+		itemDB.PersonID = uint(personIDNull.Int64)
+	}
 	if err != nil {
+		logger.Info.Println(err)
 		if errors.Is(err, sql.ErrNoRows) {
 			return item_schemas.ItemDB{}, E.ErrNotFound
+		}
+		if util.IsErrorSQL(err, sqlite3.ErrConstraint) {
+			return item_schemas.ItemDB{}, E.ErrUnprocessableEntity
 		}
 		return item_schemas.ItemDB{}, E.ErrInternalServer
 	}
@@ -275,7 +301,7 @@ func (idb *ItemDB) DeleteItem(data item_schemas.DeleteItem) error {
 	if err != nil {
 		return E.ErrInternalServer
 	}
-	_, err = stmt.Exec()
+	_, err = stmt.Exec(data.ItemID, data.UserID)
 	if err != nil {
 		if util.IsErrorSQL(err, sqlite3.ErrNotFound) {
 			return E.ErrNotFound

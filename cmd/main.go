@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/bmg-c/product-diary/db"
+	"github.com/bmg-c/product-diary/db/item_db"
 	"github.com/bmg-c/product-diary/db/product_db"
 	"github.com/bmg-c/product-diary/db/user_db"
 	"github.com/bmg-c/product-diary/handlers"
@@ -131,7 +132,7 @@ func main() {
 	router.HandleFunc("POST /api/products/copyproduct", ph.HandleCopyProduct)
 	router.HandleFunc("POST /api/products/deleteproduct", ph.HandleDeleteProduct)
 
-	_, err = db.NewStore("database.db", "items",
+	itemStore, err := db.NewStore("database.db", "items",
 		`CREATE TABLE IF NOT EXISTS items (
         item_id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER NOT NULL,
@@ -139,7 +140,7 @@ func main() {
         item_date DATE NOT NULL,
         item_cost REAL DEFAULT 0,
         item_amount REAL DEFAULT 0,
-        item_type INTEGER NOT NULL,
+        item_type INTEGER NOT NULL DEFAULT 1,
         person_id INTEGER DEFAULT NULL,
         CHECK (item_type >= 1 AND item_type <= 3),
         CHECK (item_cost >= 0),
@@ -154,6 +155,16 @@ func main() {
 	} else {
 		logger.Info.Println("Successfully connected item store")
 	}
+	idb, err := item_db.NewItemDB(itemStore, productStore, personStore)
+	if err != nil {
+		logger.Error.Println("Error creating item database layer: " + err.Error())
+	}
+	is := services.NewItemService(idb)
+	ih := handlers.NewItemHandler(is, us)
+	router.HandleFunc("POST /api/items/getitems", ih.HandleGetItems)
+	router.HandleFunc("POST /api/items/additem", ih.HandleAddItem)
+	router.HandleFunc("POST /api/items/deleteitem", ih.HandleDeleteItem)
+	router.HandleFunc("POST /api/items/changeitem", ih.HandleChangeItem)
 
 	mh := handlers.NewMainHandler()
 	router.HandleFunc("GET /api/locale/index", mh.HandleLocale)

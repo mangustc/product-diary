@@ -170,3 +170,11 @@ func GetUintFromString(str string) (uint, error) {
 	}
 	return uint(ui), nil
 }
+
+func GetFloatFromString(str string) (float32, error) {
+	f64, err := strconv.ParseFloat(str, 32)
+	if err != nil {
+		return 0, E.ErrUnprocessableEntity
+	}
+	return float32(f64), nil
+}
