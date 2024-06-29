@@ -97,6 +97,20 @@ func (ih *ItemHandler) HandleGetItems(w http.ResponseWriter, r *http.Request) {
 	}
 
 	util.RenderComponent(&out, product_views.ItemList(l, items, persons), r)
+
+	a, err := ih.itemService.GetAnalytics(items)
+	if err != nil {
+		switch err {
+		case E.ErrUnprocessableEntity:
+			code = http.StatusUnprocessableEntity
+			return
+		default:
+			code = http.StatusInternalServerError
+			logger.Error.Printf("Server error %v\n", err)
+			return
+		}
+	}
+	util.RenderComponent(&out, analytics_views.AnalyticsRangeOOB(l, a), r)
 }
 
 func (ih *ItemHandler) HandleAddItem(w http.ResponseWriter, r *http.Request) {

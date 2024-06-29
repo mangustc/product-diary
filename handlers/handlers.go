@@ -33,4 +33,5 @@ type ItemService interface {
 	GetItems(data item_schemas.GetItems) ([]item_schemas.ItemParsed, error)
 	ChangeItem(data item_schemas.ChangeItem) (item_schemas.ItemParsed, error)
 	GetAnalyticsRange(data item_schemas.GetItemsRange) (item_schemas.Analytics, error)
+	GetAnalytics(data []item_schemas.ItemParsed) (item_schemas.Analytics, error)
 }

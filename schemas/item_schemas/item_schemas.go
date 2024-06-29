@@ -78,6 +78,7 @@ type ItemParsed struct {
 	ProductCarbs    uint   `json:"product_carbs" format:"product_nutrient"`
 	ProductProteins uint   `json:"product_proteins" format:"product_nutrient"`
 	PersonName      string `json:"person_name" format:"username" validate:"omitzero"`
+	PersonIsHidden  bool   `json:"person_is_hidden"`
 }
 
 type GetItemsRange struct {

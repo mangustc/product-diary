@@ -18,6 +18,19 @@ templ AnalyticsRange(l *L.Localizer, a item_schemas.Analytics) {
 	</div>
 }
 
+templ AnalyticsRangeOOB(l *L.Localizer, a item_schemas.Analytics) {
+	<div id="analytics-range" hx-swap-oob="outerHTML" style="display: flex; flex-direction: column;">
+		<span>Total spent: { fmt.Sprint(a.TotalSpent) }</span>
+		for _, person := range a.Persons {
+			<span>{ person.PersonDB.PersonName }: { fmt.Sprint(person.TotalDebt) }</span>
+		}
+		<span>Total Calories: { fmt.Sprint(a.TotalCalories) }</span>
+		<span>Total Fats: { fmt.Sprint(a.TotalFats) }</span>
+		<span>Total Carbs: { fmt.Sprint(a.TotalCarbs) }</span>
+		<span>Total Proteins: { fmt.Sprint(a.TotalProteins) }</span>
+	</div>
+}
+
 templ AnalyticsPage(l *L.Localizer) {
 	@views.Layout("Analytics") {
 		<div style="display: flex; flex-direction: row">

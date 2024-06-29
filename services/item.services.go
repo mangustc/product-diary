@@ -164,3 +164,73 @@ func (is *ItemService) GetAnalyticsRange(data item_schemas.GetItemsRange) (item_
 	}
 	return a, nil
 }
+
+func (is *ItemService) GetAnalytics(data []item_schemas.ItemParsed) (item_schemas.Analytics, error) {
+	a := item_schemas.Analytics{
+		TotalSpent:    0,
+		TotalCalories: 0,
+		TotalFats:     0,
+		TotalCarbs:    0,
+		TotalProteins: 0,
+		Persons:       []item_schemas.PersonAnalytics{},
+	}
+	for _, i := range data {
+		switch i.ItemType {
+		case item_schemas.ItemTypeMyPurchase:
+			a.TotalSpent += i.ItemCost * i.ItemAmount
+			a.TotalCalories += float32(i.ProductCalories) * i.ItemAmount
+			a.TotalFats += float32(i.ProductFats) * i.ItemAmount
+			a.TotalCarbs += float32(i.ProductCarbs) * i.ItemAmount
+			a.TotalProteins += float32(i.ProductProteins) * i.ItemAmount
+		case item_schemas.ItemTypeFromPersonPurchase:
+			a.TotalSpent += i.ItemCost * i.ItemAmount
+			a.TotalCalories += float32(i.ProductCalories) * i.ItemAmount
+			a.TotalFats += float32(i.ProductFats) * i.ItemAmount
+			a.TotalCarbs += float32(i.ProductCarbs) * i.ItemAmount
+			a.TotalProteins += float32(i.ProductProteins) * i.ItemAmount
+			personInd := -1
+			for ind, personDB := range a.Persons {
+				if personDB.PersonDB.PersonID == i.PersonID {
+					personInd = ind
+					break
+				}
+			}
+			if personInd != -1 {
+				a.Persons[personInd].TotalDebt += i.ItemCost * i.ItemAmount
+			} else {
+				a.Persons = append(a.Persons, item_schemas.PersonAnalytics{
+					PersonDB: user_schemas.PersonDB{
+						PersonID:   i.PersonID,
+						UserID:     i.UserID,
+						PersonName: i.PersonName,
+					},
+					TotalDebt: i.ItemCost * i.ItemAmount,
+				})
+			}
+		case item_schemas.ItemTypeToPersonPurchase:
+			personInd := -1
+			for ind, personDB := range a.Persons {
+				if personDB.PersonDB.PersonID == i.PersonID {
+					personInd = ind
+					break
+				}
+			}
+			if personInd != -1 {
+				a.Persons[personInd].TotalDebt -= i.ItemCost * i.ItemAmount
+			} else {
+				a.Persons = append(a.Persons, item_schemas.PersonAnalytics{
+					PersonDB: user_schemas.PersonDB{
+						PersonID:   i.PersonID,
+						UserID:     i.UserID,
+						PersonName: i.PersonName,
+					},
+					TotalDebt: -(i.ItemCost * i.ItemAmount),
+				})
+			}
+		default:
+			// Error in db values?
+			return item_schemas.Analytics{}, E.ErrInternalServer
+		}
+	}
+	return a, nil
+}
