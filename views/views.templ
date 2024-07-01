@@ -1,0 +1,36 @@
+package views
+
+import (
+	"strconv"
+	L "github.com/bmg-c/product-diary/localization"
+)
+
+templ Layout(title string) {
+	<!DOCTYPE html>
+	<head>
+		<title>{ title }</title>
+		<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+		<meta charset="utf-8"/>
+		<script src="https://unpkg.com/htmx.org@1.9.12" integrity="sha384-ujb1lZYygJmzgSwoxRggbCHcjc0rB2XoQrxeTUQyRjrOnlCoYta87iKBWq3EsdM2" crossorigin="anonymous"></script>
+		<meta name="htmx-config" content='{"useTemplateFragments":"true"}'/>
+	</head>
+	<body>
+		<select hx-get="/api/locale/index" hx-swap="outerHTML" hx-trigger="load"></select>
+		<div id="main">
+			{ children... }
+		</div>
+	</body>
+}
+
+templ LocaleSelect(l *L.Localizer, locale L.Locale) {
+	<select name="locale" hx-post="/api/locale/setlocale">
+		<option value="en-US" selected?={ locale == L.LocaleEnUS }>{ l.GetLocalized(L.MsgEnglish) }</option>
+		<option value="ru-RU" selected?={ locale == L.LocaleRuRU }>{ l.GetLocalized(L.MsgRussian) }</option>
+	</select>
+}
+
+templ ErrorIndex(code int, msg string) {
+	@Layout(strconv.Itoa(code) + " - " + msg) {
+		<span>{ strconv.Itoa(code) + " - " + msg }</span>
+	}
+}

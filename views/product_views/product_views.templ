@@ -1,0 +1,263 @@
+package product_views
+
+import (
+	"github.com/bmg-c/product-diary/views"
+	L "github.com/bmg-c/product-diary/localization"
+	"github.com/bmg-c/product-diary/schemas/product_schemas"
+	"fmt"
+	"github.com/bmg-c/product-diary/schemas/item_schemas"
+	"github.com/bmg-c/product-diary/schemas/user_schemas"
+)
+
+type ProductAddRowErrors struct {
+	TitleErr    error
+	CaloriesErr error
+	FatsErr     error
+	CarbsErr    error
+	ProteinsErr error
+}
+
+templ ProductAddRowInput(l *L.Localizer, name string, typ string, value string, err error) {
+	if err != nil {
+		<div style="display: flex; flex-direction: column">
+			<input name={ name } type={ typ } value={ value } style="width: 120px"/>
+			<span>{ l.Localize(err.Error()) }</span>
+		</div>
+	} else {
+		<input name={ name } type={ typ } value={ value } style="width: 120px"/>
+	}
+}
+
+templ ProductAddRow(l *L.Localizer, addProduct product_schemas.AddProduct, errs ProductAddRowErrors) {
+	<tr id="product-add-row">
+		<th>
+			@ProductAddRowInput(l, "product_title", "text", addProduct.ProductTitle, errs.TitleErr)
+		</th>
+		<th>
+			@ProductAddRowInput(l, "product_calories", "number", fmt.Sprint(addProduct.ProductCalories), errs.CaloriesErr)
+		</th>
+		<th>
+			@ProductAddRowInput(l, "product_fats", "number", fmt.Sprint(addProduct.ProductFats), errs.FatsErr)
+		</th>
+		<th>
+			@ProductAddRowInput(l, "product_carbs", "number", fmt.Sprint(addProduct.ProductCarbs), errs.CarbsErr)
+		</th>
+		<th>
+			@ProductAddRowInput(l, "product_proteins", "number", fmt.Sprint(addProduct.ProductProteins), errs.ProteinsErr)
+		</th>
+		<th></th>
+		<th>
+			<button
+				hx-post="/api/products/addproduct"
+				hx-include="closest tr"
+				hx-target="#product-add-row"
+				hx-swap="outerHTML"
+			>Add</button>
+		</th>
+	</tr>
+}
+
+templ ProductList(l *L.Localizer, products []product_schemas.ProductDB, userID uint) {
+	@ProductAddRow(l, product_schemas.AddProduct{}, ProductAddRowErrors{})
+	for _, productDB := range products {
+		@Product(l, productDB, userID)
+	}
+}
+
+templ ItemList(l *L.Localizer, items []item_schemas.ItemParsed, persons []user_schemas.PersonDB) {
+	for _, itemParsed := range items {
+		@Item(l, itemParsed, persons)
+	}
+}
+
+templ ProductsPage(l *L.Localizer) {
+	@views.Layout("Products") {
+		<script>
+            document.addEventListener("DOMContentLoaded", (event) => {
+                document.body.addEventListener('htmx:beforeSwap', function(evt) {
+                    if (evt.detail.xhr.status == 422 || evt.detail.xhr.status == 404) {
+                        evt.detail.shouldSwap = true;
+                        evt.detail.isError = false;
+                    } else if (evt.detail.xhr.status == 200) {
+                        // document.getElementById("user-output-error").innerHTML = ""
+                    }
+                });
+            });
+        </script>
+		<div style="width: 100%; display: flex; flex-direction: row;">
+			<div style="width: 50%;">
+				<input
+					id="product-search"
+					name="search_query"
+					type="text"
+					hx-trigger="input changed delay:500ms"
+					hx-target="#product-table"
+					hx-swap="innerHTML"
+					hx-post="/api/products/getproducts"
+				/>
+				<h2>Products:</h2>
+				<table>
+					<thead>
+						<tr>
+							<th>Title</th>
+							<th>Calories</th>
+							<th>Fats</th>
+							<th>Carbs</th>
+							<th>Proteins</th>
+							<th>Creator</th>
+							<th>Actions</th>
+						</tr>
+					</thead>
+					<tbody id="product-table" hx-target="closest tr" hx-swap="outerHTML">
+						<tr hx-swap="outerHTML" hx-trigger="load" hx-post="/api/products/getproducts"></tr>
+					</tbody>
+				</table>
+			</div>
+			<div style="width: 50%;">
+				<input
+					id="item-date"
+					name="item_date"
+					type="date"
+					hx-trigger="input changed delay:500ms"
+					hx-target="#item-table"
+					hx-swap="innerHTML"
+					hx-post="/api/items/getitems"
+					hx-include="#item-search"
+				/>
+				<input
+					id="item-search"
+					name="search_query"
+					type="text"
+					hx-trigger="input changed delay:500ms, load"
+					hx-target="#item-table"
+					hx-swap="innerHTML"
+					hx-post="/api/items/getitems"
+					hx-include="#item-date"
+				/>
+				<div id="analytics-range"></div>
+				<h2>Items:</h2>
+				<table>
+					<thead>
+						<tr>
+							<th>Cost</th>
+							<th>Amount</th>
+							<th>Type</th>
+							<th>Person</th>
+							<th>Title</th>
+							<th>Calories</th>
+							<th>Fats</th>
+							<th>Carbs</th>
+							<th>Proteins</th>
+							<th>Actions</th>
+						</tr>
+					</thead>
+					<tbody id="item-table" hx-target="closest tr" hx-swap="outerHTML"></tbody>
+				</table>
+			</div>
+		</div>
+	}
+}
+
+// Down here because setting hx-vals attribute breaks LSP
+templ Item(l *L.Localizer, itemParsed item_schemas.ItemParsed, persons []user_schemas.PersonDB) {
+	<tr>
+		<th>
+			<input
+				name="item_cost"
+				type="number"
+				value={ fmt.Sprint(itemParsed.ItemCost) }
+			/>
+		</th>
+		<th>
+			<input
+				name="item_amount"
+				type="number"
+				value={ fmt.Sprint(itemParsed.ItemAmount) }
+			/>
+		</th>
+		<th>
+			<select name="item_type">
+				<option
+					value={ fmt.Sprint(1) }
+					selected?={ itemParsed.ItemType == 1 }
+				>My purchase</option>
+				<option
+					value={ fmt.Sprint(2) }
+					selected?={ itemParsed.ItemType == 2 }
+				>Purchase from person</option>
+				<option
+					value={ fmt.Sprint(3) }
+					selected?={ itemParsed.ItemType == 3 }
+				>Purchase to person</option>
+			</select>
+		</th>
+		<th>
+			<select name="person_id">
+				<option
+					value=""
+					selected?={ itemParsed.PersonID == 0 }
+				>Me</option>
+				for _, personDB := range persons {
+					<option
+						value={ fmt.Sprint(personDB.PersonID) }
+						selected?={ personDB.PersonID == itemParsed.PersonID }
+					>{ personDB.PersonName }</option>
+				}
+			</select>
+		</th>
+		<th>{ itemParsed.ProductTitle }</th>
+		<th>{ fmt.Sprint(itemParsed.ProductCalories) }</th>
+		<th>{ fmt.Sprint(itemParsed.ProductFats) }</th>
+		<th>{ fmt.Sprint(itemParsed.ProductCarbs) }</th>
+		<th>{ fmt.Sprint(itemParsed.ProductProteins) }</th>
+		<th>
+			<button
+				hx-post="/api/items/changeitem"
+				hx-target="closest tr"
+				hx-include="closest tr"
+				hx-vals={ fmt.Sprintf(`{"item_id": "%d"}`, itemParsed.ItemID) }
+			>Change</button>
+			<button
+				hx-post="/api/items/deleteitem"
+				hx-target="closest tr"
+				hx-vals={ fmt.Sprintf(`{"item_id": "%d"}`, itemParsed.ItemID) }
+			>Delete</button>
+		</th>
+	</tr>
+}
+
+templ Product(l *L.Localizer, productDB product_schemas.ProductDB, userID uint) {
+	<tr>
+		<th>{ productDB.ProductTitle }</th>
+		<th>{ fmt.Sprint(productDB.ProductCalories) }</th>
+		<th>{ fmt.Sprint(productDB.ProductFats) }</th>
+		<th>{ fmt.Sprint(productDB.ProductCarbs) }</th>
+		<th>{ fmt.Sprint(productDB.ProductProteins) }</th>
+		if productDB.UserID == userID {
+			<th>Me</th>
+		} else {
+			<th>{ fmt.Sprint(productDB.UserID) }</th>
+		}
+		<th>
+			<button
+				hx-post="/api/products/copyproduct"
+				hx-target="#product-add-row"
+				hx-vals={ fmt.Sprintf(`{"product_id": "%d"}`, productDB.ProductID) }
+			>Copy</button>
+			if productDB.UserID == userID {
+				<button
+					hx-post="/api/products/deleteproduct"
+					hx-target="closest tr"
+					hx-vals={ fmt.Sprintf(`{"product_id": "%d"}`, productDB.ProductID) }
+				>Delete</button>
+			}
+			<button
+				hx-post="/api/items/additem"
+				hx-target="#item-table"
+				hx-include="#item-date"
+				hx-swap="afterbegin"
+				hx-vals={ fmt.Sprintf(`{"product_id": "%d"}`, productDB.ProductID) }
+			>Add</button>
+		</th>
+	</tr>
+}
