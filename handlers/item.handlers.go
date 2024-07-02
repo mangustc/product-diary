@@ -42,7 +42,11 @@ func (ih *ItemHandler) HandleGetItems(w http.ResponseWriter, r *http.Request) {
 	} else {
 		userDB, err = ih.userService.GetUserBySession(sessionUUID)
 		if err != nil {
-			logger.Error.Printf("Failure getting user from valid session cookie.\n")
+			if errors.Is(err, E.ErrInternalServer) {
+				logger.Error.Printf("Failure getting session cookie.\n")
+			}
+			code = http.StatusUnprocessableEntity
+			return
 		}
 	}
 
@@ -128,7 +132,11 @@ func (ih *ItemHandler) HandleAddItem(w http.ResponseWriter, r *http.Request) {
 	} else {
 		userDB, err = ih.userService.GetUserBySession(sessionUUID)
 		if err != nil {
-			logger.Error.Printf("Failure getting user from valid session cookie.\n")
+			if errors.Is(err, E.ErrInternalServer) {
+				logger.Error.Printf("Failure getting session cookie.\n")
+			}
+			code = http.StatusUnprocessableEntity
+			return
 		}
 	}
 
@@ -205,7 +213,11 @@ func (ih *ItemHandler) HandleDeleteItem(w http.ResponseWriter, r *http.Request) 
 	} else {
 		userDB, err = ih.userService.GetUserBySession(sessionUUID)
 		if err != nil {
-			logger.Error.Printf("Failure getting user from valid session cookie.\n")
+			if errors.Is(err, E.ErrInternalServer) {
+				logger.Error.Printf("Failure getting session cookie.\n")
+			}
+			code = http.StatusUnprocessableEntity
+			return
 		}
 	}
 
@@ -259,7 +271,11 @@ func (ih *ItemHandler) HandleChangeItem(w http.ResponseWriter, r *http.Request) 
 	} else {
 		userDB, err = ih.userService.GetUserBySession(sessionUUID)
 		if err != nil {
-			logger.Error.Printf("Failure getting user from valid session cookie.\n")
+			if errors.Is(err, E.ErrInternalServer) {
+				logger.Error.Printf("Failure getting session cookie.\n")
+			}
+			code = http.StatusUnprocessableEntity
+			return
 		}
 	}
 
@@ -337,7 +353,11 @@ func (ih *ItemHandler) HandleGetAnalyticsRange(w http.ResponseWriter, r *http.Re
 	} else {
 		userDB, err = ih.userService.GetUserBySession(sessionUUID)
 		if err != nil {
-			logger.Error.Printf("Failure getting user from valid session cookie.\n")
+			if errors.Is(err, E.ErrInternalServer) {
+				logger.Error.Printf("Failure getting session cookie.\n")
+			}
+			code = http.StatusUnprocessableEntity
+			return
 		}
 	}
 

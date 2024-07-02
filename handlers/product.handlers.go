@@ -50,7 +50,11 @@ func (ph *ProductHandler) HandleAddProduct(w http.ResponseWriter, r *http.Reques
 	} else {
 		userDB, err = ph.userService.GetUserBySession(sessionUUID)
 		if err != nil {
-			logger.Error.Printf("Failure getting user from valid session cookie.\n")
+			if errors.Is(err, E.ErrInternalServer) {
+				logger.Error.Printf("Failure getting session cookie.\n")
+			}
+			code = http.StatusUnprocessableEntity
+			return
 		}
 	}
 
@@ -138,7 +142,11 @@ func (ph *ProductHandler) HandleGetProducts(w http.ResponseWriter, r *http.Reque
 	} else {
 		userDB, err = ph.userService.GetUserBySession(sessionUUID)
 		if err != nil {
-			logger.Error.Printf("Failure getting user from valid session cookie.\n")
+			if errors.Is(err, E.ErrInternalServer) {
+				logger.Error.Printf("Failure getting session cookie.\n")
+			}
+			code = http.StatusUnprocessableEntity
+			return
 		}
 	}
 
@@ -219,7 +227,11 @@ func (ph *ProductHandler) HandleDeleteProduct(w http.ResponseWriter, r *http.Req
 	} else {
 		userDB, err = ph.userService.GetUserBySession(sessionUUID)
 		if err != nil {
-			logger.Error.Printf("Failure getting user from valid session cookie.\n")
+			if errors.Is(err, E.ErrInternalServer) {
+				logger.Error.Printf("Failure getting session cookie.\n")
+			}
+			code = http.StatusUnprocessableEntity
+			return
 		}
 	}
 
