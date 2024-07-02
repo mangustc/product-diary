@@ -64,22 +64,22 @@ func (ph *ProductHandler) HandleAddProduct(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	input.ProductTitle = r.Form.Get("product_title")
-	input.ProductCalories, err = util.GetUintFromString(r.Form.Get("product_calories"))
+	input.ProductCalories, err = util.GetFloatFromString(r.Form.Get("product_calories"))
 	if err != nil {
 		code = http.StatusUnprocessableEntity
 		inputErrs.CaloriesErr = L.GetError(L.MsgErrorProductCalories)
 	}
-	input.ProductFats, err = util.GetUintFromString(r.Form.Get("product_fats"))
+	input.ProductFats, err = util.GetFloatFromString(r.Form.Get("product_fats"))
 	if err != nil {
 		code = http.StatusUnprocessableEntity
 		inputErrs.FatsErr = L.GetError(L.MsgErrorProductNutrient)
 	}
-	input.ProductCarbs, err = util.GetUintFromString(r.Form.Get("product_carbs"))
+	input.ProductCarbs, err = util.GetFloatFromString(r.Form.Get("product_carbs"))
 	if err != nil {
 		code = http.StatusUnprocessableEntity
 		inputErrs.CarbsErr = L.GetError(L.MsgErrorProductNutrient)
 	}
-	input.ProductProteins, err = util.GetUintFromString(r.Form.Get("product_proteins"))
+	input.ProductProteins, err = util.GetFloatFromString(r.Form.Get("product_proteins"))
 	if err != nil {
 		code = http.StatusUnprocessableEntity
 		inputErrs.ProteinsErr = L.GetError(L.MsgErrorProductNutrient)
