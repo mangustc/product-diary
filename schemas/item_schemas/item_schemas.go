@@ -27,13 +27,13 @@ type ItemDB struct {
 }
 
 type AddItem struct {
-	UserID    uint      `json:"user_id" format:"id"`
-	ProductID uint      `json:"product_id" format:"id"`
-	ItemDate  time.Time `json:"item_date"`
-	// ItemCost   float32 `json:"item_cost" format:"item_cost"`
-	// ItemAmount float32 `json:"item_amount" format:"item_amount"`
-	// ItemType   uint8   `json:"item_type" format:"item_type"`
-	// PersonID   uint    `json:"person_id" format:"id"`
+	UserID     uint      `json:"user_id" format:"id"`
+	ProductID  uint      `json:"product_id" format:"id"`
+	ItemDate   time.Time `json:"item_date"`
+	ItemCost   float32   `json:"item_cost" format:"item_cost" validate:"omitzero"`
+	ItemAmount float32   `json:"item_amount" format:"item_amount" validate:"omitzero"`
+	ItemType   uint8     `json:"item_type" format:"item_type" validate:"omitzero"`
+	PersonID   uint      `json:"person_id" format:"id" validate:"omitzero"`
 }
 
 type DeleteItem struct {
