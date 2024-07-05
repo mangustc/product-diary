@@ -159,22 +159,12 @@ func (ih *ItemHandler) HandleAddItem(w http.ResponseWriter, r *http.Request) {
 		code = http.StatusUnprocessableEntity
 		return
 	}
-	input.ItemCost, err = util.GetFloatFromString(r.Form.Get("item_cost"))
-	if err != nil {
-		code = http.StatusUnprocessableEntity
-		return
-	}
+	input.ItemCost, _ = util.GetFloatFromString(r.Form.Get("item_cost"))
 	itemTypeMaybe, err := util.GetUintFromString(r.Form.Get("item_type"))
-	if err != nil {
-		code = http.StatusUnprocessableEntity
-		return
+	if err == nil {
+		input.ItemType = uint8(itemTypeMaybe)
 	}
-	input.ItemType = uint8(itemTypeMaybe)
-	input.PersonID, err = util.GetUintFromString(r.Form.Get("person_id"))
-	if err != nil {
-		code = http.StatusUnprocessableEntity
-		return
-	}
+	input.PersonID, _ = util.GetUintFromString(r.Form.Get("person_id"))
 	input.UserID = userDB.UserID
 
 	ve := schemas.ValidateStruct(input)
