@@ -9,6 +9,11 @@ import (
 	"github.com/bmg-c/product-diary/schemas/user_schemas"
 )
 
+const (
+	ProductAddRowTitle uint8 = iota
+	ProductAddRowNutrient
+)
+
 type ProductAddRowErrors struct {
 	TitleErr    error
 	CaloriesErr error
@@ -17,33 +22,74 @@ type ProductAddRowErrors struct {
 	ProteinsErr error
 }
 
-templ ProductAddRowInput(l *L.Localizer, name string, typ string, value string, err error) {
-	if err != nil {
-		<div style="display: flex; flex-direction: column">
-			<input name={ name } type={ typ } value={ value } style="width: 120px"/>
+type ProductAddRowStyle struct {
+	Type uint8
+}
+
+templ ProductAddRowInput(l *L.Localizer, name string, typ string, value string, err error, style ProductAddRowStyle) {
+	<div style="display: flex; flex-direction: column">
+		if style.Type == ProductAddRowTitle {
+			<input name={ name } type={ typ } value={ value } style="width: 320px"/>
+		} else if style.Type == ProductAddRowNutrient {
+			<input name={ name } type={ typ } value={ value } style="width: 60px"/>
+		}
+		if err != nil {
 			<span>{ l.Localize(err.Error()) }</span>
-		</div>
-	} else {
-		<input name={ name } type={ typ } value={ value } style="width: 120px"/>
-	}
+		}
+	</div>
 }
 
 templ ProductAddRow(l *L.Localizer, addProduct product_schemas.AddProduct, errs ProductAddRowErrors) {
 	<tr id="product-add-row">
 		<th>
-			@ProductAddRowInput(l, "product_title", "text", addProduct.ProductTitle, errs.TitleErr)
+			@ProductAddRowInput(
+				l,
+				"product_title",
+				"text",
+				addProduct.ProductTitle,
+				errs.TitleErr,
+				ProductAddRowStyle{Type: ProductAddRowTitle},
+			)
 		</th>
 		<th>
-			@ProductAddRowInput(l, "product_calories", "number", fmt.Sprint(addProduct.ProductCalories), errs.CaloriesErr)
+			@ProductAddRowInput(
+				l,
+				"product_calories",
+				"number",
+				fmt.Sprint(addProduct.ProductCalories),
+				errs.CaloriesErr,
+				ProductAddRowStyle{Type: ProductAddRowNutrient},
+			)
 		</th>
 		<th>
-			@ProductAddRowInput(l, "product_fats", "number", fmt.Sprint(addProduct.ProductFats), errs.FatsErr)
+			@ProductAddRowInput(
+				l,
+				"product_fats",
+				"number",
+				fmt.Sprint(addProduct.ProductFats),
+				errs.FatsErr,
+				ProductAddRowStyle{Type: ProductAddRowNutrient},
+			)
 		</th>
 		<th>
-			@ProductAddRowInput(l, "product_carbs", "number", fmt.Sprint(addProduct.ProductCarbs), errs.CarbsErr)
+			@ProductAddRowInput(
+				l,
+				"product_carbs",
+				"number",
+				fmt.Sprint(addProduct.ProductCarbs),
+				errs.CarbsErr,
+				ProductAddRowStyle{Type: ProductAddRowNutrient},
+			)
 		</th>
 		<th>
-			@ProductAddRowInput(l, "product_proteins", "number", fmt.Sprint(addProduct.ProductProteins), errs.ProteinsErr)
+			@ProductAddRowInput(
+				l,
+				"product_proteins",
+				"number",
+				fmt.Sprint(addProduct.ProductProteins),
+				errs.ProteinsErr,
+				ProductAddRowStyle{Type: ProductAddRowNutrient},
+			)
 		</th>
 		<th></th>
 		<th>
@@ -104,12 +150,12 @@ document.body.addEventListener("setTempValues", function(evt){
 				<table>
 					<thead>
 						<tr>
-							<th>Title</th>
-							<th>Calories</th>
-							<th>Fats</th>
-							<th>Carbs</th>
-							<th>Proteins</th>
-							<th>Creator</th>
+							<th style="width: 320px">Title</th>
+							<th style="width: 60px">Calories</th>
+							<th style="width: 60px">Fats</th>
+							<th style="width: 60px">Carbs</th>
+							<th style="width: 60px">Proteins</th>
+							<th style="width: 100px">Creator</th>
 							<th>Actions</th>
 						</tr>
 					</thead>
