@@ -73,17 +73,22 @@ templ ItemList(l *L.Localizer, items []item_schemas.ItemParsed, persons []user_s
 templ ProductsPage(l *L.Localizer) {
 	@views.Layout("Products") {
 		<script>
-            document.addEventListener("DOMContentLoaded", (event) => {
-                document.body.addEventListener('htmx:beforeSwap', function(evt) {
-                    if (evt.detail.xhr.status == 422 || evt.detail.xhr.status == 404) {
-                        evt.detail.shouldSwap = true;
-                        evt.detail.isError = false;
-                    } else if (evt.detail.xhr.status == 200) {
-                        // document.getElementById("user-output-error").innerHTML = ""
-                    }
-                });
-            });
-        </script>
+document.addEventListener("DOMContentLoaded", (event) => {
+	document.body.addEventListener('htmx:beforeSwap', function(evt) {
+		if (evt.detail.xhr.status == 422 || evt.detail.xhr.status == 404) {
+			evt.detail.shouldSwap = true;
+			evt.detail.isError = false;
+		} else if (evt.detail.xhr.status == 200) {
+			// document.getElementById("user-output-error").innerHTML = ""
+		}
+	});
+});
+document.body.addEventListener("setTempValues", function(evt){
+	localStorage.setItem("product" + evt.detail.product_id + "_cost", evt.detail.item_cost)
+	localStorage.setItem("item_type", evt.detail.item_type)
+	localStorage.setItem("person_id", evt.detail.person_id)
+})
+		</script>
 		<div style="width: 100%; display: flex; flex-direction: row;">
 			<div style="width: 50%;">
 				<input
@@ -256,7 +261,15 @@ templ Product(l *L.Localizer, productDB product_schemas.ProductDB, userID uint) 
 				hx-target="#item-table"
 				hx-include="#item-date"
 				hx-swap="afterbegin"
-				hx-vals={ fmt.Sprintf(`{"product_id": "%d"}`, productDB.ProductID) }
+				hx-vals={ fmt.Sprintf(
+						`js:{
+							"product_id":%[1]d,
+							"item_cost":localStorage.getItem("product%[1]d_cost"),
+							"item_type":localStorage.getItem("item_type"),
+							"person_id":localStorage.getItem("person_id")
+						}`,
+						productDB.ProductID,
+					) }
 			>Add</button>
 		</th>
 	</tr>

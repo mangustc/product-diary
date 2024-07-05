@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -154,6 +155,22 @@ func (ih *ItemHandler) HandleAddItem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	input.ItemDate, err = time.Parse("2006-01-02", r.Form.Get("item_date"))
+	if err != nil {
+		code = http.StatusUnprocessableEntity
+		return
+	}
+	input.ItemCost, err = util.GetFloatFromString(r.Form.Get("item_cost"))
+	if err != nil {
+		code = http.StatusUnprocessableEntity
+		return
+	}
+	itemTypeMaybe, err := util.GetUintFromString(r.Form.Get("item_type"))
+	if err != nil {
+		code = http.StatusUnprocessableEntity
+		return
+	}
+	input.ItemType = uint8(itemTypeMaybe)
+	input.PersonID, err = util.GetUintFromString(r.Form.Get("person_id"))
 	if err != nil {
 		code = http.StatusUnprocessableEntity
 		return
@@ -334,6 +351,13 @@ func (ih *ItemHandler) HandleChangeItem(w http.ResponseWriter, r *http.Request) 
 			return
 		}
 	}
+	w.Header().Add("HX-Trigger", fmt.Sprintf(
+		`{"setTempValues":{"product_id":%d, "item_cost":%f, "item_type":%d, "person_id":%d}}`,
+		itemParsed.ProductID,
+		itemParsed.ItemCost,
+		itemParsed.ItemType,
+		itemParsed.PersonID,
+	))
 
 	util.RenderComponent(&out, product_views.Item(l, itemParsed, persons), r)
 }
