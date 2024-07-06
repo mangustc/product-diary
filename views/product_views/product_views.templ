@@ -9,6 +9,11 @@ import (
 	"github.com/bmg-c/product-diary/schemas/user_schemas"
 )
 
+const (
+	ProductAddRowTitle uint8 = iota
+	ProductAddRowNutrient
+)
+
 type ProductAddRowErrors struct {
 	TitleErr    error
 	CaloriesErr error
@@ -17,33 +22,74 @@ type ProductAddRowErrors struct {
 	ProteinsErr error
 }
 
-templ ProductAddRowInput(l *L.Localizer, name string, typ string, value string, err error) {
-	if err != nil {
-		<div style="display: flex; flex-direction: column">
-			<input name={ name } type={ typ } value={ value } style="width: 120px"/>
+type ProductAddRowStyle struct {
+	Type uint8
+}
+
+templ ProductAddRowInput(l *L.Localizer, name string, typ string, value string, err error, style ProductAddRowStyle) {
+	<div style="display: flex; flex-direction: column">
+		if style.Type == ProductAddRowTitle {
+			<input name={ name } type={ typ } value={ value } style="width: 320px"/>
+		} else if style.Type == ProductAddRowNutrient {
+			<input name={ name } type={ typ } value={ value } style="width: 60px"/>
+		}
+		if err != nil {
 			<span>{ l.Localize(err.Error()) }</span>
-		</div>
-	} else {
-		<input name={ name } type={ typ } value={ value } style="width: 120px"/>
-	}
+		}
+	</div>
 }
 
 templ ProductAddRow(l *L.Localizer, addProduct product_schemas.AddProduct, errs ProductAddRowErrors) {
 	<tr id="product-add-row">
 		<th>
-			@ProductAddRowInput(l, "product_title", "text", addProduct.ProductTitle, errs.TitleErr)
+			@ProductAddRowInput(
+				l,
+				"product_title",
+				"text",
+				addProduct.ProductTitle,
+				errs.TitleErr,
+				ProductAddRowStyle{Type: ProductAddRowTitle},
+			)
 		</th>
 		<th>
-			@ProductAddRowInput(l, "product_calories", "number", fmt.Sprint(addProduct.ProductCalories), errs.CaloriesErr)
+			@ProductAddRowInput(
+				l,
+				"product_calories",
+				"number",
+				fmt.Sprint(addProduct.ProductCalories),
+				errs.CaloriesErr,
+				ProductAddRowStyle{Type: ProductAddRowNutrient},
+			)
 		</th>
 		<th>
-			@ProductAddRowInput(l, "product_fats", "number", fmt.Sprint(addProduct.ProductFats), errs.FatsErr)
+			@ProductAddRowInput(
+				l,
+				"product_fats",
+				"number",
+				fmt.Sprint(addProduct.ProductFats),
+				errs.FatsErr,
+				ProductAddRowStyle{Type: ProductAddRowNutrient},
+			)
 		</th>
 		<th>
-			@ProductAddRowInput(l, "product_carbs", "number", fmt.Sprint(addProduct.ProductCarbs), errs.CarbsErr)
+			@ProductAddRowInput(
+				l,
+				"product_carbs",
+				"number",
+				fmt.Sprint(addProduct.ProductCarbs),
+				errs.CarbsErr,
+				ProductAddRowStyle{Type: ProductAddRowNutrient},
+			)
 		</th>
 		<th>
-			@ProductAddRowInput(l, "product_proteins", "number", fmt.Sprint(addProduct.ProductProteins), errs.ProteinsErr)
+			@ProductAddRowInput(
+				l,
+				"product_proteins",
+				"number",
+				fmt.Sprint(addProduct.ProductProteins),
+				errs.ProteinsErr,
+				ProductAddRowStyle{Type: ProductAddRowNutrient},
+			)
 		</th>
 		<th></th>
 		<th>
@@ -73,17 +119,22 @@ templ ItemList(l *L.Localizer, items []item_schemas.ItemParsed, persons []user_s
 templ ProductsPage(l *L.Localizer) {
 	@views.Layout("Products") {
 		<script>
-            document.addEventListener("DOMContentLoaded", (event) => {
-                document.body.addEventListener('htmx:beforeSwap', function(evt) {
-                    if (evt.detail.xhr.status == 422 || evt.detail.xhr.status == 404) {
-                        evt.detail.shouldSwap = true;
-                        evt.detail.isError = false;
-                    } else if (evt.detail.xhr.status == 200) {
-                        // document.getElementById("user-output-error").innerHTML = ""
-                    }
-                });
-            });
-        </script>
+document.addEventListener("DOMContentLoaded", (event) => {
+	document.body.addEventListener('htmx:beforeSwap', function(evt) {
+		if (evt.detail.xhr.status == 422 || evt.detail.xhr.status == 404) {
+			evt.detail.shouldSwap = true;
+			evt.detail.isError = false;
+		} else if (evt.detail.xhr.status == 200) {
+			// document.getElementById("user-output-error").innerHTML = ""
+		}
+	});
+});
+document.body.addEventListener("setTempValues", function(evt){
+	localStorage.setItem("product" + evt.detail.product_id + "_cost", evt.detail.item_cost)
+	localStorage.setItem("item_type", evt.detail.item_type)
+	localStorage.setItem("person_id", evt.detail.person_id)
+})
+		</script>
 		<div style="width: 100%; display: flex; flex-direction: row;">
 			<div style="width: 50%;">
 				<input
@@ -99,12 +150,12 @@ templ ProductsPage(l *L.Localizer) {
 				<table>
 					<thead>
 						<tr>
-							<th>Title</th>
-							<th>Calories</th>
-							<th>Fats</th>
-							<th>Carbs</th>
-							<th>Proteins</th>
-							<th>Creator</th>
+							<th style="width: 320px">Title</th>
+							<th style="width: 60px">Calories</th>
+							<th style="width: 60px">F</th>
+							<th style="width: 60px">C</th>
+							<th style="width: 60px">P</th>
+							<th style="width: 100px">Creator</th>
 							<th>Actions</th>
 						</tr>
 					</thead>
@@ -139,15 +190,15 @@ templ ProductsPage(l *L.Localizer) {
 				<table>
 					<thead>
 						<tr>
-							<th>Cost</th>
-							<th>Amount</th>
+							<th style="width: 80px">Cost</th>
+							<th style="width: 40px">Amount</th>
 							<th>Type</th>
 							<th>Person</th>
 							<th>Title</th>
-							<th>Calories</th>
-							<th>Fats</th>
-							<th>Carbs</th>
-							<th>Proteins</th>
+							<th style="width: 60px">Calories</th>
+							<th style="width: 40px">F</th>
+							<th style="width: 40px">C</th>
+							<th style="width: 40px">P</th>
 							<th>Actions</th>
 						</tr>
 					</thead>
@@ -166,6 +217,7 @@ templ Item(l *L.Localizer, itemParsed item_schemas.ItemParsed, persons []user_sc
 				name="item_cost"
 				type="number"
 				value={ fmt.Sprint(itemParsed.ItemCost) }
+				style="width: 80px"
 			/>
 		</th>
 		<th>
@@ -173,6 +225,7 @@ templ Item(l *L.Localizer, itemParsed item_schemas.ItemParsed, persons []user_sc
 				name="item_amount"
 				type="number"
 				value={ fmt.Sprint(itemParsed.ItemAmount) }
+				style="width: 40px"
 			/>
 		</th>
 		<th>
@@ -256,7 +309,15 @@ templ Product(l *L.Localizer, productDB product_schemas.ProductDB, userID uint) 
 				hx-target="#item-table"
 				hx-include="#item-date"
 				hx-swap="afterbegin"
-				hx-vals={ fmt.Sprintf(`{"product_id": "%d"}`, productDB.ProductID) }
+				hx-vals={ fmt.Sprintf(
+						`js:{
+							"product_id":%[1]d,
+							"item_cost":localStorage.getItem("product%[1]d_cost"),
+							"item_type":localStorage.getItem("item_type"),
+							"person_id":localStorage.getItem("person_id")
+						}`,
+						productDB.ProductID,
+					) }
 			>Add</button>
 		</th>
 	</tr>

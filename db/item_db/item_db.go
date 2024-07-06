@@ -33,10 +33,45 @@ func NewItemDB(itemStore *db.Store, productStore *db.Store, personStore *db.Stor
 }
 
 func (idb *ItemDB) AddItem(data item_schemas.AddItem) (item_schemas.ItemDB, error) {
+	cols := []string{}
+	argsStr := []string{}
+	args := []any{}
+
+	cols = append(cols, "user_id")
+	args = append(args, data.UserID)
+	argsStr = append(argsStr, "?")
+	cols = append(cols, "product_id")
+	args = append(args, data.ProductID)
+	argsStr = append(argsStr, "?")
+	cols = append(cols, "item_date")
+	args = append(args, data.ItemDate.Format("2006-01-02"))
+	argsStr = append(argsStr, "?")
+	if !schemas.IsZero(data.ItemCost) {
+		cols = append(cols, "item_cost")
+		args = append(args, data.ItemCost)
+		argsStr = append(argsStr, "?")
+	}
+	if !schemas.IsZero(data.ItemAmount) {
+		cols = append(cols, "item_amount")
+		args = append(args, data.ItemAmount)
+		argsStr = append(argsStr, "?")
+	}
+	if !schemas.IsZero(data.ItemType) {
+		cols = append(cols, "item_type")
+		args = append(args, data.ItemType)
+		argsStr = append(argsStr, "?")
+	}
+	if !schemas.IsZero(data.PersonID) {
+		cols = append(cols, "person_id")
+		args = append(args, data.PersonID)
+		argsStr = append(argsStr, "?")
+	}
+
 	query := `INSERT INTO ` + idb.itemStore.TableName + `
-        (item_id, user_id, product_id, item_date)
-        VALUES (NULL, ?, ?, ?)
+        (` + strings.Join(cols, ", ") + `)
+        VALUES (` + strings.Join(argsStr, ", ") + `)
         RETURNING *`
+
 	stmt, err := idb.itemStore.DB.Prepare(query)
 	defer stmt.Close()
 	if err != nil {
@@ -46,9 +81,7 @@ func (idb *ItemDB) AddItem(data item_schemas.AddItem) (item_schemas.ItemDB, erro
 	nullPersonID := sql.NullInt64{}
 	itemDB := item_schemas.ItemDB{}
 	err = stmt.QueryRow(
-		data.UserID,
-		data.ProductID,
-		data.ItemDate.Format("2006-01-02"),
+		args...,
 	).Scan(
 		&itemDB.ItemID,
 		&itemDB.UserID,

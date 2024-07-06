@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -42,7 +43,11 @@ func (ih *ItemHandler) HandleGetItems(w http.ResponseWriter, r *http.Request) {
 	} else {
 		userDB, err = ih.userService.GetUserBySession(sessionUUID)
 		if err != nil {
-			logger.Error.Printf("Failure getting user from valid session cookie.\n")
+			if errors.Is(err, E.ErrInternalServer) {
+				logger.Error.Printf("Failure getting session cookie.\n")
+			}
+			code = http.StatusUnprocessableEntity
+			return
 		}
 	}
 
@@ -128,7 +133,11 @@ func (ih *ItemHandler) HandleAddItem(w http.ResponseWriter, r *http.Request) {
 	} else {
 		userDB, err = ih.userService.GetUserBySession(sessionUUID)
 		if err != nil {
-			logger.Error.Printf("Failure getting user from valid session cookie.\n")
+			if errors.Is(err, E.ErrInternalServer) {
+				logger.Error.Printf("Failure getting session cookie.\n")
+			}
+			code = http.StatusUnprocessableEntity
+			return
 		}
 	}
 
@@ -150,6 +159,12 @@ func (ih *ItemHandler) HandleAddItem(w http.ResponseWriter, r *http.Request) {
 		code = http.StatusUnprocessableEntity
 		return
 	}
+	input.ItemCost, _ = util.GetFloatFromString(r.Form.Get("item_cost"))
+	itemTypeMaybe, err := util.GetUintFromString(r.Form.Get("item_type"))
+	if err == nil {
+		input.ItemType = uint8(itemTypeMaybe)
+	}
+	input.PersonID, _ = util.GetUintFromString(r.Form.Get("person_id"))
 	input.UserID = userDB.UserID
 
 	ve := schemas.ValidateStruct(input)
@@ -205,7 +220,11 @@ func (ih *ItemHandler) HandleDeleteItem(w http.ResponseWriter, r *http.Request) 
 	} else {
 		userDB, err = ih.userService.GetUserBySession(sessionUUID)
 		if err != nil {
-			logger.Error.Printf("Failure getting user from valid session cookie.\n")
+			if errors.Is(err, E.ErrInternalServer) {
+				logger.Error.Printf("Failure getting session cookie.\n")
+			}
+			code = http.StatusUnprocessableEntity
+			return
 		}
 	}
 
@@ -259,7 +278,11 @@ func (ih *ItemHandler) HandleChangeItem(w http.ResponseWriter, r *http.Request) 
 	} else {
 		userDB, err = ih.userService.GetUserBySession(sessionUUID)
 		if err != nil {
-			logger.Error.Printf("Failure getting user from valid session cookie.\n")
+			if errors.Is(err, E.ErrInternalServer) {
+				logger.Error.Printf("Failure getting session cookie.\n")
+			}
+			code = http.StatusUnprocessableEntity
+			return
 		}
 	}
 
@@ -318,6 +341,13 @@ func (ih *ItemHandler) HandleChangeItem(w http.ResponseWriter, r *http.Request) 
 			return
 		}
 	}
+	w.Header().Add("HX-Trigger", fmt.Sprintf(
+		`{"setTempValues":{"product_id":%d, "item_cost":%f, "item_type":%d, "person_id":%d}}`,
+		itemParsed.ProductID,
+		itemParsed.ItemCost,
+		itemParsed.ItemType,
+		itemParsed.PersonID,
+	))
 
 	util.RenderComponent(&out, product_views.Item(l, itemParsed, persons), r)
 }
@@ -337,7 +367,11 @@ func (ih *ItemHandler) HandleGetAnalyticsRange(w http.ResponseWriter, r *http.Re
 	} else {
 		userDB, err = ih.userService.GetUserBySession(sessionUUID)
 		if err != nil {
-			logger.Error.Printf("Failure getting user from valid session cookie.\n")
+			if errors.Is(err, E.ErrInternalServer) {
+				logger.Error.Printf("Failure getting session cookie.\n")
+			}
+			code = http.StatusUnprocessableEntity
+			return
 		}
 	}
 

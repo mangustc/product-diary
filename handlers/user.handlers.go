@@ -302,7 +302,11 @@ func (uh *UserHandler) HandleProfileIndex(w http.ResponseWriter, r *http.Request
 	} else {
 		userDB, err = uh.UserService.GetUserBySession(sessionUUID)
 		if err != nil {
-			logger.Error.Printf("Failure getting user from valid session cookie.\n")
+			if errors.Is(err, E.ErrInternalServer) {
+				logger.Error.Printf("Failure getting session cookie.\n")
+			}
+			code = http.StatusUnprocessableEntity
+			return
 		}
 	}
 	up := user_schemas.UserPublic{
@@ -339,7 +343,11 @@ func (uh *UserHandler) HandleTogglePerson(w http.ResponseWriter, r *http.Request
 	} else {
 		userDB, err = uh.UserService.GetUserBySession(sessionUUID)
 		if err != nil {
-			logger.Error.Printf("Failure getting user from valid session cookie.\n")
+			if errors.Is(err, E.ErrInternalServer) {
+				logger.Error.Printf("Failure getting session cookie.\n")
+			}
+			code = http.StatusUnprocessableEntity
+			return
 		}
 	}
 
@@ -386,7 +394,11 @@ func (uh *UserHandler) HandleAddPerson(w http.ResponseWriter, r *http.Request) {
 	} else {
 		userDB, err = uh.UserService.GetUserBySession(sessionUUID)
 		if err != nil {
-			logger.Error.Printf("Failure getting user from valid session cookie.\n")
+			if errors.Is(err, E.ErrInternalServer) {
+				logger.Error.Printf("Failure getting session cookie.\n")
+			}
+			code = http.StatusUnprocessableEntity
+			return
 		}
 	}
 
