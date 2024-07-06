@@ -72,7 +72,7 @@ func (pdb *ProductDB) GetProducts(data product_schemas.GetProducts) ([]product_s
 	query := `SELECT product_id, product_title, product_calories, product_fats, product_carbs, product_proteins, user_id, is_deleted
         FROM ` + pdb.productStore.TableName + `
         WHERE length(trim(replace(lower(?), ' ', ''), replace(lower(product_title || product_calories 
-    || product_fats || product_carbs || product_proteins), ' ', ''))) < 3 AND
+    || product_fats || product_carbs || product_proteins), ' ', ''))) < 1 AND
             is_deleted = FALSE`
 
 	rows, err := pdb.productStore.DB.Query(query, data.SearchQuery)

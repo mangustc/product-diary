@@ -152,9 +152,9 @@ document.body.addEventListener("setTempValues", function(evt){
 						<tr>
 							<th style="width: 320px">Title</th>
 							<th style="width: 60px">Calories</th>
-							<th style="width: 60px">Fats</th>
-							<th style="width: 60px">Carbs</th>
-							<th style="width: 60px">Proteins</th>
+							<th style="width: 60px">F</th>
+							<th style="width: 60px">C</th>
+							<th style="width: 60px">P</th>
 							<th style="width: 100px">Creator</th>
 							<th>Actions</th>
 						</tr>
@@ -190,15 +190,15 @@ document.body.addEventListener("setTempValues", function(evt){
 				<table>
 					<thead>
 						<tr>
-							<th>Cost</th>
-							<th>Amount</th>
+							<th style="width: 80px">Cost</th>
+							<th style="width: 40px">Amount</th>
 							<th>Type</th>
 							<th>Person</th>
 							<th>Title</th>
-							<th>Calories</th>
-							<th>Fats</th>
-							<th>Carbs</th>
-							<th>Proteins</th>
+							<th style="width: 60px">Calories</th>
+							<th style="width: 40px">F</th>
+							<th style="width: 40px">C</th>
+							<th style="width: 40px">P</th>
 							<th>Actions</th>
 						</tr>
 					</thead>
@@ -217,6 +217,7 @@ templ Item(l *L.Localizer, itemParsed item_schemas.ItemParsed, persons []user_sc
 				name="item_cost"
 				type="number"
 				value={ fmt.Sprint(itemParsed.ItemCost) }
+				style="width: 80px"
 			/>
 		</th>
 		<th>
@@ -224,6 +225,7 @@ templ Item(l *L.Localizer, itemParsed item_schemas.ItemParsed, persons []user_sc
 				name="item_amount"
 				type="number"
 				value={ fmt.Sprint(itemParsed.ItemAmount) }
+				style="width: 40px"
 			/>
 		</th>
 		<th>
