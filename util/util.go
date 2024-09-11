@@ -106,7 +106,6 @@ func DeleteUserSessionCookie(w http.ResponseWriter) {
 		SameSite: http.SameSiteLaxMode,
 		MaxAge:   -1,
 	}
-
 	http.SetCookie(w, &cookie)
 }
 
@@ -119,7 +118,6 @@ func SetLocaleCookie(w http.ResponseWriter, locale localization.Locale) {
 		Secure:   true,
 		SameSite: http.SameSiteLaxMode,
 	}
-
 	http.SetCookie(w, &cookie)
 }
 
